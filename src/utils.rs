@@ -1,4 +1,6 @@
-use std::{io, error::Error};
+use std::{error::Error, io};
+
+use crate::token::TokenManager;
 
 pub struct Credentials {
     pub client_id: String,
@@ -22,16 +24,16 @@ pub fn load_credentials() -> Result<Credentials, Box<dyn Error>> {
     })
 }
 
-pub fn update_env_file(token: &serde_json::Value, time: f64) -> io::Result<()> {
+pub fn update_env_file(token_manager: &TokenManager) -> io::Result<()> {
     let contents = std::fs::read_to_string(".env")?;
     let mut new_contents = vec![];
 
     for line in contents.lines() {
         if line.starts_with("TOKEN") {
-            let new_line = format!("TOKEN={}", token);
+            let new_line = format!("TOKEN={}", token_manager.token);
             new_contents.push(new_line);
         } else if line.starts_with("TIME_TOKEN_WAS_MADE") {
-            let new_line = format!("TIME_TOKEN_WAS_MADE={}", time);
+            let new_line = format!("TIME_TOKEN_WAS_MADE={}", token_manager.time_token_was_made);
             new_contents.push(new_line);
         } else {
             new_contents.push(line.to_string());
