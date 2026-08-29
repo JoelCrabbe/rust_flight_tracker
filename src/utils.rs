@@ -9,6 +9,8 @@ pub struct Credentials {
     pub time_token_was_made: f64,
 }
 
+// Project wide I should handle errors better
+// e.g. if some environment variable isnt set, I should try to create it
 pub fn load_credentials() -> Result<Credentials, Box<dyn Error>> {
     dotenvy::dotenv_override()?;
     let client_id = dotenvy::var("CLIENT_ID")?;

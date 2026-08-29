@@ -42,9 +42,9 @@ impl Point {
 
 #[derive(Debug)]
 pub enum Unit {
-    m,
-    km,
-    mi,
+    M,
+    Km,
+    Mi,
 }
 
 #[derive(Debug)]

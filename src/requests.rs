@@ -21,10 +21,9 @@ pub fn find_aircraft(
         area.min_lat, area.min_long, area.max_lat, area.max_long
     );
     url.push_str(&filter);
-    println!("{}", url);
 
-    let header = token_manager.header();
     let response = client.get(url).headers(token_manager.header()).send()?;
+
     if response.status().is_success() {
         let body: serde_json::Value = response.json()?;
         println!("{}", body);
@@ -33,5 +32,6 @@ pub fn find_aircraft(
     }
 
     Ok(())
-    
+    // https://opensky-network.org/api/states/all?lamin=45.8389&lomin=5.9962&lamax=47.8229&lomax=10.5226
+    // https://opensky-network.org/api/states/all?lamin=-0.91&lomin=-1.39&lamax=2.14&lomax=1.88
 }

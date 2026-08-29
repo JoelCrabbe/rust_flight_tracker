@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::utils;
 
-const TOKEN_UPDATE_URL: &'static str =
+const TOKEN_UPDATE_URL: &str =
     "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 
 // Tokens expire after 30 minutes. A 401 Unauthorized response means the token has expired - request a new one and retry.
@@ -59,6 +59,7 @@ impl TokenManager {
 
         let response = client.post(TOKEN_UPDATE_URL).form(&data).send()?;
         let body = response.text()?;
+        println!("{}", body);
         let json_data: serde_json::Value = serde_json::from_str(&body).unwrap();
 
         // get the current time this token was made
@@ -68,7 +69,7 @@ impl TokenManager {
             .as_secs_f64();
 
         // update TokenManager struct fields with new data
-        let token = &json_data["access_token"];
+        let token = json_data["access_token"].as_str().unwrap();
         self.token = token.to_string();
         self.time_token_was_made = now;
 
