@@ -1,5 +1,4 @@
 use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 mod errors;
@@ -7,15 +6,10 @@ mod regions_of_interest;
 mod requests;
 mod token;
 mod utils;
+mod aircraft_structures;
 
-use regions_of_interest::{BoundingBox, Circle, Point, Unit};
-use requests::{AicraftTuple, AircraftInfo, PositionSource};
-
-#[derive(Deserialize, Debug)]
-struct AircraftData {
-    states: Vec<AircraftInfo>,
-    time: i64,
-}
+use regions_of_interest::BoundingBox;
+use aircraft_structures::{AicraftTuple, AircraftInfo, AircraftData};
 
 
 fn main() -> Result<(), Box<dyn Error>> {
