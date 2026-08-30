@@ -2,23 +2,16 @@ use std::{error::Error, io};
 
 use crate::token::TokenManager;
 
-pub struct Credentials {
-    pub client_id: String,
-    pub client_secret: String,
-    pub token: String,
-    pub time_token_was_made: f64,
-}
-
 // Project wide I should handle errors better
 // e.g. if some environment variable isnt set, I should try to create it
-pub fn load_credentials() -> Result<Credentials, Box<dyn Error>> {
+pub fn load_credentials() -> Result<TokenManager, Box<dyn Error>> {
     dotenvy::dotenv_override()?;
     let client_id = dotenvy::var("CLIENT_ID")?;
     let client_secret = dotenvy::var("CLIENT_SECRET")?;
     let token = dotenvy::var("TOKEN")?;
     let time_token_was_made = dotenvy::var("TIME_TOKEN_WAS_MADE")?.parse::<f64>()?;
 
-    Ok(Credentials {
+    Ok(TokenManager {
         client_id,
         client_secret,
         token,

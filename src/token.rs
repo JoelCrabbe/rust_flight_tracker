@@ -5,6 +5,9 @@ use reqwest::{
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::{Serialize, Deserialize};
+use serde_json::from_str;
+
 use crate::utils;
 
 const TOKEN_UPDATE_URL: &str =
@@ -16,6 +19,17 @@ pub struct TokenManager {
     pub client_secret: String,
     pub token: String,
     pub time_token_was_made: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TokenJSONResponse {
+    access_token: String,
+    expires_in: u32,
+    refresh_expires_in: u32,
+    token_type: String,
+    #[serde(rename = "not-before-policy")]
+    not_before_policy: u32,
+    scope: String,
 }
 
 impl TokenManager {
@@ -58,9 +72,8 @@ impl TokenManager {
         ]);
 
         let response = client.post(TOKEN_UPDATE_URL).form(&data).send()?;
-        let body = response.text()?;
-        println!("{}", body);
-        let json_data: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let json_data: TokenJSONResponse = response.json()?;
+        
 
         // get the current time this token was made
         let now = SystemTime::now()
@@ -69,8 +82,7 @@ impl TokenManager {
             .as_secs_f64();
 
         // update TokenManager struct fields with new data
-        let token = json_data["access_token"].as_str().unwrap();
-        self.token = token.to_string();
+        self.token = json_data.access_token;
         self.time_token_was_made = now;
 
         // update .env file with new token value and time token was made
