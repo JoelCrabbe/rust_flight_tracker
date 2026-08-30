@@ -1,5 +1,8 @@
-use reqwest::blocking::Client;
+use std::error::Error;
 
+use reqwest::blocking::{Client, Response};
+
+use crate::aircraft_structures::AircraftData;
 use crate::regions_of_interest::BoundingBox;
 use crate::token::TokenManager;
 
@@ -9,7 +12,7 @@ pub fn find_aircraft(
     token_manager: &mut TokenManager,
     client: &Client,
     area: &BoundingBox,
-) -> Result<(), reqwest::Error> {
+) -> Result<AircraftData, reqwest::Error> {
     // what about some sort of builder pattern for the url i.e. create it in steps of chained methods?
 
     // first need to construct the query
@@ -26,11 +29,9 @@ pub fn find_aircraft(
 
     //TODO: Need to implement the parsing response into struct's logic in here
     if response.status().is_success() {
-        let body: serde_json::Value = response.json()?;
-        println!("{}", body);
+        let data: AircraftData = response.json()?;
+        return Ok(data);
     } else {
-        println!("{}", response.status());
+        panic!("{}", &response.status());
     }
-
-    Ok(())
 }

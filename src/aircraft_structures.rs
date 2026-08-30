@@ -4,8 +4,8 @@
 * At the moment, I have not included this field.
 */
 
-use serde_repr::{Serialize_repr, Deserialize_repr};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[derive(Serialize_repr, Deserialize_repr, Debug)]
 #[repr(u8)]
@@ -64,55 +64,9 @@ pub struct AircraftInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AicraftTuple(
-    pub String,
-    pub Option<String>,
-    pub String,
-    pub Option<i32>,
-    pub i32,
-    pub Option<f64>,
-    pub Option<f64>,
-    pub Option<f64>,
-    pub bool,
-    pub Option<f64>,
-    pub Option<f64>,
-    pub Option<f64>,
-    pub Option<Vec<i32>>,
-    pub Option<f64>,
-    pub Option<String>,
-    pub bool,
-    pub PositionSource,
-);
-
-// implementing this trait tells us how to convert
-// from an AircraftTuple to an AircraftInfo struct
-impl From<AicraftTuple> for AircraftInfo {
-    fn from(value: AicraftTuple) -> Self {
-        Self {
-            icao24: value.0,
-            callsign: value.1,
-            origin_country: value.2,
-            time_position: value.3,
-            last_contact: value.4,
-            longitude: value.5,
-            latitude: value.6,
-            baro_altitude: value.7,
-            on_ground: value.8,
-            velocity: value.9,
-            true_track: value.10,
-            vertical_rate: value.11,
-            sensors: value.12,
-            geo_altitude: value.13,
-            squawk: value.14,
-            spi: value.15,
-            position_source: value.16,
-        }
-    }
-}
-
-#[derive(Deserialize, Debug)]
+// Wrapping the vec in an Option as it is possible the response returns null for states
+// this happens in the case no aircraft were found in a particular area
 pub struct AircraftData {
-    pub states: Vec<AircraftInfo>,
+    pub states: Option<Vec<AircraftInfo>>,
     pub time: i64,
 }
-

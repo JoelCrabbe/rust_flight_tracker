@@ -5,7 +5,7 @@ use reqwest::{
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 
 use crate::utils;
@@ -73,7 +73,6 @@ impl TokenManager {
 
         let response = client.post(TOKEN_UPDATE_URL).form(&data).send()?;
         let json_data: TokenJSONResponse = response.json()?;
-        
 
         // get the current time this token was made
         let now = SystemTime::now()

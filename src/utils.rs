@@ -1,6 +1,6 @@
 use std::{error::Error, io};
 
-use crate::token::TokenManager;
+use crate::{aircraft_structures::AircraftData, token::TokenManager};
 
 // Project wide I should handle errors better
 // e.g. if some environment variable isnt set, I should try to create it
@@ -42,4 +42,10 @@ pub fn update_env_file(token_manager: &TokenManager) -> io::Result<()> {
     std::fs::write(".env", updated_file_contents)?;
 
     Ok(())
+}
+
+pub fn save_data_to_file(data: &AircraftData, filename: &str) {
+    let json_string = serde_json::to_string_pretty(data).unwrap();
+    std::fs::write(filename, json_string).unwrap();
+
 }
