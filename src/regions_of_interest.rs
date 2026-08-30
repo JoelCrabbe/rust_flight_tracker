@@ -1,4 +1,4 @@
-use crate::errors::{assert_lat, assert_long};
+use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct BoundingBox {

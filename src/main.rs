@@ -1,21 +1,20 @@
-use reqwest::blocking::Client;
-use std::error::Error;
+// #![allow(unused)]
+
+use crate::prelude::*;
+use anyhow::Result;
 
 mod aircraft_structures;
 mod errors;
+mod open_sky_network_client;
 mod query_builder;
 mod regions_of_interest;
-mod open_sky_network_client;
 mod token;
 mod utils;
+mod prelude;
 
-use regions_of_interest::BoundingBox;
 
-use crate::{
-    aircraft_structures::AircraftData, open_sky_network_client::OpenSkyNetworkClient, token::TokenManager,
-};
-
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
+    /*
     let token_manager = match TokenManager::new() {
         Ok(token) => token,
         Err(e) => panic!("{}", e),
@@ -34,11 +33,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         },
         Err(e) => panic!("{}", e),
     };
+    */
 
 
-    // let contents = std::fs::read_to_string("response.json")?;
-    // let data: AircraftData = serde_json::from_str(&contents)?;
-    // println!("{:?}", data.states.unwrap()[5].position_source);
+    let filename = "response.json";
+    let contents = std::fs::read_to_string(filename)
+        .with_context(|| format!("problem parsing `{filename}` into a string"))?;
+
+    let data: AircraftData = from_str(&contents)
+        .context("problem parsing the json file into AircraftData struct")?;
+
+    println!("{:?}", data.states.unwrap()[0].callsign);
 
     Ok(())
 }

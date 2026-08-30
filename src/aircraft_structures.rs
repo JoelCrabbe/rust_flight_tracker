@@ -4,16 +4,15 @@
 * At the moment, I have not included this field.
 */
 
-use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use crate::prelude::*;
 
 #[derive(Serialize_repr, Deserialize_repr, Debug)]
 #[repr(u8)]
 pub enum PositionSource {
-    ADSB = 0,
-    ASTERIX = 1,
-    MLAT = 2,
-    FLARM = 3,
+    Adsb = 0,
+    Asterix = 1,
+    Mlat = 2,
+    Flarm = 3,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, Debug)]

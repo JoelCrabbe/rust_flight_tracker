@@ -1,14 +1,7 @@
-use reqwest::{
-    blocking::Client,
-    header::{HeaderMap, HeaderValue},
-};
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::{Deserialize, Serialize};
-
+use crate::prelude::*;
 use crate::utils;
 
 const TOKEN_UPDATE_URL: &str =
