@@ -2,7 +2,7 @@
 in this file we can construct the query the user wants to send which could include areas to search, icao24 codes etc
 
 Usage:
-let url_builder = 
+let url_builder =
     URLBuilder
         ::new()
         ::filter_area(some_sort_of_shape)

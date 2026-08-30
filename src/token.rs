@@ -1,12 +1,13 @@
 use reqwest::{
-    blocking,
+    blocking::Client,
     header::{HeaderMap, HeaderValue},
 };
+
+use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use serde_json::from_str;
 
 use crate::utils;
 
@@ -21,30 +22,40 @@ pub struct TokenManager {
     pub time_token_was_made: f64,
 }
 
+/*
+#[serde(deny_unknown_fields)]
+Always error during deserialization when encountering unknown fields.
+When this attribute is not present, by default unknown fields are ignored for self-describing formats like JSON.
+This struct only needs the one field i actually care about in the response, all others are ignored by default
+*/
 #[derive(Serialize, Deserialize, Debug)]
 struct TokenJSONResponse {
     access_token: String,
-    expires_in: u32,
-    refresh_expires_in: u32,
-    token_type: String,
-    #[serde(rename = "not-before-policy")]
-    not_before_policy: u32,
-    scope: String,
 }
 
 impl TokenManager {
-    pub fn new(
-        client_id: String,
-        client_secret: String,
-        token: String,
-        time_token_was_made: f64,
-    ) -> Self {
-        Self {
+    pub fn new() -> Result<Self> {
+        dotenvy::dotenv_override().context("loading environment variables")?;
+
+        let client_id =
+            dotenvy::var("CLIENT_ID").context("reading `CLIENT_ID` environment variable")?;
+
+        let client_secret = dotenvy::var("CLIENT_SECRET")
+            .context("reading `CLIENT_SECRET` environment variable")?;
+
+        let token = dotenvy::var("TOKEN").context("reading `TOKEN` environment variable")?;
+
+        let time_token_was_made = dotenvy::var("TIME_TOKEN_WAS_MADE")
+            .context("reading `TIME_TOKEN_WAS_MADE` environment variable")?
+            .parse::<f64>()
+            .context("problem parsing `TIME_TOKEN_WAS_MADE` environment variable into `f64`")?;
+
+        Ok(TokenManager {
             client_id,
             client_secret,
             token,
             time_token_was_made,
-        }
+        })
     }
 
     pub fn get_token(&mut self) -> String {
@@ -63,7 +74,7 @@ impl TokenManager {
     pub fn update_token(&mut self) -> Result<String, reqwest::Error> {
         // update token with 30 seconds left to go on current token to allow for some room
         // do we need to make a client here or can we use the same on from main.rs and instead pass it in as a parameter?
-        let client = blocking::Client::new();
+        let client = Client::new();
 
         let data = HashMap::from([
             ("grant_type", "client_credentials"),
