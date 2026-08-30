@@ -47,5 +47,4 @@ pub fn update_env_file(token_manager: &TokenManager) -> io::Result<()> {
 pub fn save_data_to_file(data: &AircraftData, filename: &str) {
     let json_string = serde_json::to_string_pretty(data).unwrap();
     std::fs::write(filename, json_string).unwrap();
-
 }

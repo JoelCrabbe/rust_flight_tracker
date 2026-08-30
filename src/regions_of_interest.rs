@@ -66,3 +66,8 @@ impl Circle {
         }
     }
 }
+
+// I want to give users to make their own area to search for aircraft in
+// i.e. some shape that will implement a trait to make shared behaviour
+// on the gui I imagine dragging a box over part of the map
+// finding the min/max lat and long from this and using this as the area to search
