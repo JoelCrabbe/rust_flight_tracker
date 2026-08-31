@@ -2,11 +2,11 @@ use crate::prelude::*;
 
 pub struct OpenSkyNetworkClient {
     token_manager: TokenManager,
-    http_client: reqwest::blocking::Client,
+    http_client: Client,
 }
 
 impl OpenSkyNetworkClient {
-    pub fn new(token_manager: TokenManager, http_client: reqwest::blocking::Client) -> Self {
+    pub fn new(token_manager: TokenManager, http_client: Client) -> Self {
         Self {
             token_manager,
             http_client,

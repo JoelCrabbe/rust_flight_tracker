@@ -16,12 +16,13 @@ pub fn update_env_file(token_manager: &TokenManager) -> io::Result<()> {
             new_contents.push(line.to_string());
         }
     }
-    let mut updated_file_contents = String::with_capacity(new_contents.len());
+    let mut updated_file_contents = String::new();
     for line in new_contents {
         updated_file_contents.push_str(&line);
         updated_file_contents.push('\n');
     }
     std::fs::write(".env", updated_file_contents)?;
+    println!("Updated `TOKEN` and `TIME_TOKEN_WAS_MADE` environment variables in `.env`");
 
     Ok(())
 }

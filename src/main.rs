@@ -6,12 +6,12 @@ use anyhow::Result;
 mod aircraft_structures;
 mod errors;
 mod open_sky_network_client;
+mod prelude;
 mod query_builder;
 mod regions_of_interest;
+mod server;
 mod token;
 mod utils;
-mod prelude;
-
 
 fn main() -> Result<()> {
     /*
@@ -35,12 +35,11 @@ fn main() -> Result<()> {
     };
     */
 
-
     let filename = "response.json";
     let contents = std::fs::read_to_string(filename)
         .with_context(|| format!("problem parsing `{filename}` into a string"))?;
 
-    let data: AircraftData = from_str(&contents)
+    let data = from_str::<AircraftData>(&contents)
         .context("problem parsing the json file into AircraftData struct")?;
 
     println!("{:?}", data.states.unwrap()[0].callsign);
