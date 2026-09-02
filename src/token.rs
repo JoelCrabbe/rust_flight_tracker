@@ -51,23 +51,22 @@ impl TokenManager {
         })
     }
 
-    pub fn get_token(&mut self) -> String {
+    pub async fn get_token(&mut self) -> String {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs_f64();
 
         if now >= self.time_token_was_made + 1770 as f64 {
-            self.update_token().unwrap()
+            self.update_token().await.unwrap()
         } else {
             self.token.clone() // probably want to avoid clone
         }
     }
 
-    pub fn update_token(&mut self) -> Result<String, reqwest::Error> {
+    pub async fn update_token(&mut self) -> Result<String, reqwest::Error> {
         // update token with 30 seconds left to go on current token to allow for some room
-        // do we need to make a client here or can we use the same on from main.rs and instead pass it in as a parameter?
-        let client = Client::new();
+        let client = reqwest::Client::new();
 
         let data = HashMap::from([
             ("grant_type", "client_credentials"),
@@ -75,8 +74,8 @@ impl TokenManager {
             ("client_secret", self.client_secret.as_str()),
         ]);
 
-        let response = client.post(TOKEN_UPDATE_URL).form(&data).send()?;
-        let json_data: TokenJSONResponse = response.json()?;
+        let response = client.post(TOKEN_UPDATE_URL).form(&data).send().await?;
+        let json_data = response.json::<TokenJSONResponse>().await.unwrap();
 
         // get the current time this token was made
         let now = SystemTime::now()
@@ -93,9 +92,9 @@ impl TokenManager {
         Ok(self.token.clone()) // avoid clone if we can
     }
 
-    pub fn header(&mut self) -> HeaderMap {
+    pub async fn header(&mut self) -> HeaderMap {
         let mut header = HeaderMap::new();
-        let val = HeaderValue::from_str(&format!("Bearer {}", self.get_token())).unwrap();
+        let val = HeaderValue::from_str(&format!("Bearer {}", self.get_token().await)).unwrap();
         header.insert("Authorization", val);
         header
     }

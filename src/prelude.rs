@@ -1,8 +1,7 @@
 pub use anyhow::Context;
-pub use reqwest::blocking::Client;
 pub use reqwest::header::{HeaderMap, HeaderValue};
 pub use serde::{Deserialize, Serialize};
-pub use serde_json::{from_str, to_string_pretty};
+pub use serde_json::to_string_pretty;
 pub use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use std::time::{SystemTime, UNIX_EPOCH};
 

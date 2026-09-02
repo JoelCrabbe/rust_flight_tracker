@@ -1,19 +1,29 @@
+use axum::Json;
+
+use crate::Coordinates;
 use crate::prelude::*;
+use crate::utils;
+
+use anyhow::Result;
 
 pub struct OpenSkyNetworkClient {
     token_manager: TokenManager,
-    http_client: Client,
+    http_client: reqwest::Client,
 }
 
 impl OpenSkyNetworkClient {
-    pub fn new(token_manager: TokenManager, http_client: Client) -> Self {
+    pub fn new(token_manager: TokenManager, http_client: reqwest::Client) -> Self {
         Self {
             token_manager,
             http_client,
         }
     }
 
-    pub fn find_aircraft(&mut self, area: &BoundingBox) -> Result<AircraftData, reqwest::Error> {
+    pub async fn find_aircraft(&mut self, Json(coordinates): Json<Coordinates>) -> Result<()> {
+        let (min_lat, max_lat) = utils::get_min_max(&coordinates.latitudes);
+        let (min_long, max_long) = utils::get_min_max(&coordinates.longitudes);
+        let area = BoundingBox::new(min_lat, max_lat, min_long, max_long);
+
         let mut url = "https://opensky-network.org/api/states/all?".to_string();
         let filter = format!(
             "lamin={}&lomin={}&lamax={}&lomax={}",
@@ -21,15 +31,17 @@ impl OpenSkyNetworkClient {
         );
 
         url.push_str(&filter);
-
-        let headers = self.token_manager.header();
-        let response = self.http_client.get(url).headers(headers).send()?;
+        
+        let headers = self.token_manager.header().await;
+        let response = self.http_client.get(url).headers(headers).send().await?;
 
         if response.status().is_success() {
-            let data = response.json::<AircraftData>()?;
-            Ok(data)
-        } else {
-            panic!("{}", &response.status())
+            let area_data = response.json::<AircraftData>().await?;
+            println!("{:?}", area_data);
         }
+
+        Ok(())
+
+
     }
 }
