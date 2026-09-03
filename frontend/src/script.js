@@ -18,7 +18,13 @@ let drawControl = new L.Control.Draw({
 // Add toolbar to the map
 map.addControl(drawControl);
 
-// everything above this is setup boilerplate I think
+function addImageToMap(imageUrl, aircraft) {
+    // let imageBounds = [[latitude, longitude], [latitude, longitude]];
+    // L.imageOverlay(imageUrl, imageBounds).addTo(map)
+    let marker = L.marker([aircraft.latitude, aircraft.longitude]).addTo(map);
+    let info = `icao24: ${aircraft.icao24}, Callsign: ${aircraft.callsign}, Origin Country: ${aircraft.origin_country}`;
+    marker.bindPopup(info);
+}
 
 async function getCoordinates(event) {
     // event is like a struct with two fields, layer and layerType
@@ -29,21 +35,19 @@ async function getCoordinates(event) {
 
     // for a rectangle gets the lat and long of each of the 4 corners
     // tbh this confusing i cant tell what types im dealing with
-    let lats = [];
-    let longs = [];
+    let latitudes = [];
+    let longitudes = [];
     let latLongs = layer.getLatLngs();
     for(let x of latLongs) {
         for(let pair of x) {
-            lats.push(pair.lat);
-            longs.push(pair.lng);
+            latitudes.push(pair.lat);
+            longitudes.push(pair.lng);
         }
     }
     const payload = {
-        lats,
-        longs,
+        latitudes,
+        longitudes,
     }
-
-    // console.log(coords);
 
     // send http request
     try {
@@ -56,24 +60,20 @@ async function getCoordinates(event) {
         if (!response.ok) {
             throw new Error("error receiving response from rust application");
         }
-
         
-    } 
+        const data = await response.json();
+        console.log(data);
+        if (data.states !== null) {
+            for (let aircraft of data.states) {
+                addImageToMap("foo", aircraft);
+            }
+        } else {
+            console.log("no aircraft in this area at this moment in time");
+        }
+    }
     catch(error) {
         console.log(error);
     }
-
-
-    // fetch("http://localhost:3000/coordinates", {
-    //     method: "POST",
-    //     headers: {
-    //         "Content-Type": "Application/json",
-    //     },
-    //     body: JSON.stringify(coords),
-    // })
-    // .then((response) => response.text())
-    // .then((text) => console.log(text));
-
 
 }
 

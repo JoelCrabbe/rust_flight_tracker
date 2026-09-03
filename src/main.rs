@@ -1,11 +1,13 @@
 // #![allow(unused)]
 
-use std::sync::{Arc, Mutex};
-
 use crate::prelude::*;
-use axum::{Router, routing::post};
-use tower_http::cors::CorsLayer;
 use anyhow::Result;
+use axum::{
+    Json, Router, debug_handler,
+    extract::State,
+    routing::{get, post},
+};
+use tower_http::cors::CorsLayer;
 
 mod aircraft_structures;
 mod errors;
@@ -22,9 +24,13 @@ pub struct Coordinates {
     pub longitudes: Vec<f64>,
 }
 
+async fn handler(State(mut state): State<OpenSkyNetworkClient>, Json(coordinates): Json<Coordinates>) -> Json<AircraftData> {
+    let data = state.find_aircraft(coordinates).await.unwrap();
+    Json(data)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-
     let token_manager = match TokenManager::new() {
         Ok(token) => token,
         Err(e) => panic!("{}", e),
@@ -32,22 +38,21 @@ async fn main() -> Result<()> {
 
     let http_client = reqwest::Client::new();
 
-    let mut osnc = Arc::new(Mutex::new(
-        OpenSkyNetworkClient::new(token_manager, http_client)));
+    let mut osnc = OpenSkyNetworkClient::new(token_manager, http_client);
 
     let app = Router::new()
-        // .route("/coordinates", post(osnc.find_aircraft)
-        .layer(CorsLayer::permissive());
+        .route("/coordinates", post(handler))
+        .layer(CorsLayer::permissive())
+        .with_state(osnc);
 
-    let listener = tokio::net::TcpListener::bind("localhost:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("localhost:3000")
+        .await
+        .unwrap();
     axum::serve(listener, app).await.unwrap();
-
-
-
 
     // let area_of_interest = BoundingBox::new(49.50, 51.50, 6.50, 8.50);
 
-    // let data = match osnc.find_aircraft(&area_of_interest) {    
+    // let data = match osnc.find_aircraft(&area_of_interest) {
     //     Ok(data) => {
     //         utils::save_data_to_file(&data, "response.json");
     //         data
@@ -66,7 +71,6 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-    
 
 /*
 

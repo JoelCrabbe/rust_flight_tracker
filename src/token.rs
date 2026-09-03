@@ -8,6 +8,7 @@ const TOKEN_UPDATE_URL: &str =
     "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 
 // Tokens expire after 30 minutes. A 401 Unauthorized response means the token has expired - request a new one and retry.
+#[derive(Clone)]
 pub struct TokenManager {
     pub client_id: String,
     pub client_secret: String,
