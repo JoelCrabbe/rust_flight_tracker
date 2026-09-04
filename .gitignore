@@ -1,3 +1,4 @@
 /target
 .env
-*.json
+response.json
+/frontend/node_modules

@@ -40,8 +40,5 @@ impl OpenSkyNetworkClient {
         } else {
             panic!("response from OpenSkyNetwork was not successfull");
         }
-
-
-
     }
 }

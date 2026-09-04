@@ -1,6 +1,9 @@
 // #![allow(unused)]
 
-use crate::prelude::*;
+use crate::{
+    aircraft_structures::{AircraftInfo, PositionSource},
+    prelude::*,
+};
 use anyhow::Result;
 use axum::{
     Json, Router, debug_handler,
@@ -24,9 +27,42 @@ pub struct Coordinates {
     pub longitudes: Vec<f64>,
 }
 
-async fn handler(State(mut state): State<OpenSkyNetworkClient>, Json(coordinates): Json<Coordinates>) -> Json<AircraftData> {
+async fn handler(
+    State(mut state): State<OpenSkyNetworkClient>,
+    Json(coordinates): Json<Coordinates>,
+) -> Json<AircraftData> {
     let data = state.find_aircraft(coordinates).await.unwrap();
     Json(data)
+}
+
+async fn test() -> &'static str {
+    "hello from rust server"
+}
+
+async fn test_handler() -> Json<AircraftData> {
+    println!("received request, sending example data");
+    Json(AircraftData {
+        states: Some(vec![AircraftInfo {
+            icao24: "44029f".to_string(),
+            callsign: Some("AUA20C  ".to_string()),
+            origin_country: "Austria".to_string(),
+            time_position: Some(1788117821),
+            last_contact: 1788117821,
+            longitude: Some(7.4847),
+            latitude: Some(50.9601),
+            baro_altitude: Some(3215.64),
+            on_ground: false,
+            velocity: Some(167.15),
+            true_track: Some(125.35),
+            vertical_rate: Some(4.55),
+            sensors: None,
+            geo_altitude: Some(3360.42),
+            squawk: Some("7657".to_string()),
+            spi: false,
+            position_source: PositionSource::Adsb,
+        }]),
+        time: 123456,
+    })
 }
 
 #[tokio::main]
@@ -38,10 +74,12 @@ async fn main() -> Result<()> {
 
     let http_client = reqwest::Client::new();
 
-    let mut osnc = OpenSkyNetworkClient::new(token_manager, http_client);
+    let osnc = OpenSkyNetworkClient::new(token_manager, http_client);
 
     let app = Router::new()
-        .route("/coordinates", post(handler))
+        // .route("/coordinates", post(handler))
+        .route("/coordinates", post(test_handler))
+        .route("/", get(test))
         .layer(CorsLayer::permissive())
         .with_state(osnc);
 
@@ -50,32 +88,17 @@ async fn main() -> Result<()> {
         .unwrap();
     axum::serve(listener, app).await.unwrap();
 
-    // let area_of_interest = BoundingBox::new(49.50, 51.50, 6.50, 8.50);
-
-    // let data = match osnc.find_aircraft(&area_of_interest) {
-    //     Ok(data) => {
-    //         utils::save_data_to_file(&data, "response.json");
-    //         data
-    //     },
-    //     Err(e) => panic!("{}", e),
-    // };
-
-    // let filename = "response.json";
-    // let contents = std::fs::read_to_string(filename)
-    //     .with_context(|| format!("problem parsing `{filename}` into a string"))?;
-
-    // let data = from_str::<AircraftData>(&contents)
-    //     .context("problem parsing the json file into AircraftData struct")?;
-
-    // println!("{:?}", data.states.unwrap()[0].callsign);
-
     Ok(())
 }
 
 /*
+Due to api token limitations, updating aircraft's position by constantly requesting the OpenSkyNetwork api will burn through my tokens
+very fast.
+We could instead draw our area on the map and `monitor` that airspace.
+We could query the api periodically e.g. every 15 seconds and see what is in the airspace
+we could use some sort of hashset to keep track of what we have seen, this way we can check if we have seen each aircraft before
+using an O(1) lookup in the set.
+Maybe we could also go down the phone notification route of sending notifications of what is in the airspace.
 
-use python3 -m http.server 8080 to host index.hmtl
-so index.html is running on localhost:8080
-server is running on localhost:3000
-
+I tried using twilio and it didn't work and kind of sucks
 */
