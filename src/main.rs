@@ -77,8 +77,8 @@ async fn main() -> Result<()> {
     let osnc = OpenSkyNetworkClient::new(token_manager, http_client);
 
     let app = Router::new()
-        // .route("/coordinates", post(handler))
-        .route("/coordinates", post(test_handler))
+        .route("/coordinates", post(handler))
+        // .route("/coordinates", post(test_handler))
         .route("/", get(test))
         .layer(CorsLayer::permissive())
         .with_state(osnc);
