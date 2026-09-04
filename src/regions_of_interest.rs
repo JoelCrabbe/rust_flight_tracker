@@ -2,26 +2,26 @@ use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct BoundingBox {
-    pub min_lat: f64,
-    pub max_lat: f64,
-    pub min_long: f64,
-    pub max_long: f64,
+    pub min_latitude: f64,
+    pub max_latitude: f64,
+    pub min_longitude: f64,
+    pub max_longitude: f64,
 }
 
 // I also want the idea of a point and a circle of some radius around that point and capture everything in that area
 // alongside the idea of the square box
 
 impl BoundingBox {
-    pub fn new(min_lat: f64, max_lat: f64, min_long: f64, max_long: f64) -> Self {
-        assert_lat(min_lat);
-        assert_lat(max_lat);
-        assert_long(min_long);
-        assert_long(max_long);
+    pub fn new(min_latitude: f64, max_latitude: f64, min_longitude: f64, max_longitude: f64) -> Self {
+        assert_lat(min_latitude);
+        assert_lat(max_latitude);
+        assert_long(min_longitude);
+        assert_long(max_longitude);
         Self {
-            min_lat,
-            max_lat,
-            min_long,
-            max_long,
+            min_latitude,
+            max_latitude,
+            min_longitude,
+            max_longitude,
         }
     }
 }

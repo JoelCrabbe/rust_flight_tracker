@@ -32,17 +32,3 @@ pub fn save_data_to_file(data: &AircraftData, filename: &str) {
     std::fs::write(filename, json_string).unwrap();
     println!("Wrote data to {filename}");
 }
-
-pub fn get_min_max(nums: &[f64]) -> (f64, f64) {
-    let min = nums
-        .iter()
-        .min_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap();
-
-    let max = nums
-        .iter()
-        .max_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap();
-
-    (*min, *max)
-}

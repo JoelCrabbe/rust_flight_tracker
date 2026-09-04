@@ -4,14 +4,17 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 
-import { Coordinates, AircraftData, AircraftInfo } from "./types";
+import { MinMaxLatLong, AircraftData, AircraftInfo } from "./types";
 
 export let map: L.Map;
 let drawnItems: L.FeatureGroup;
 let aircraftIdToMarker: Map<string, L.Marker> = new Map();
 let aircraftIdToAircraftInfo: Map<string, AircraftInfo> = new Map();
-let startTime: DOMHighResTimeStamp = 0;
-
+let startTime: number = 0;
+let minLatitude = Infinity;
+let maxLatitude = -Infinity;
+let minLongitude = Infinity;
+let maxLongitude = -Infinity;
 
 export function setupMap() {
     map = L.map("map").setView([51.505, -0.09], 4);
@@ -25,7 +28,7 @@ export function setupMap() {
 
     let drawControl = new L.Control.Draw({
             edit: {
-                featureGroup: drawnItems
+                featureGroup: drawnItems,
             }
         });
     
@@ -36,18 +39,21 @@ export async function getCoordinates(event: L.DrawEvents.Created) {
     let layer = event.layer as L.Polyline;
     drawnItems.addLayer(layer);
 
-    let latitudes: number[] = [];
-    let longitudes: number[] = [];
     for (let corners of layer.getLatLngs() as L.LatLng[][]) {
         for (let corner of corners) {
-            latitudes.push(corner.lat);
-            longitudes.push(corner.lng);
+            minLatitude = Math.min(minLatitude, corner.lat);
+            maxLatitude = Math.max(maxLatitude, corner.lat);
+            minLongitude = Math.min(minLongitude, corner.lng);
+            maxLongitude = Math.max(minLongitude, corner.lng);
         }
     }
-    const payload: Coordinates = {
-        latitudes: latitudes,
-        longitudes: longitudes,
-    };
+
+    const payload: MinMaxLatLong = {
+        minLatitude,
+        maxLatitude,
+        minLongitude,
+        maxLongitude,
+    }
 
     // send http request to rust server
     try {
@@ -89,22 +95,41 @@ function addAircraftToMap(imageUrl: string, aircraft: AircraftInfo) {
     aircraftIdToAircraftInfo.set(aircraft.icao24, aircraft);
 }
 
-export function updateMap(timestamp: DOMHighResTimeStamp) {
+export function update(timestamp: number) {
     let dt = timestamp - startTime;
     for (let id of aircraftIdToMarker.keys()) {
         let aircraft = aircraftIdToAircraftInfo.get(id)!;
-        let v = aircraft.velocity;
-        aircraft.longitude! += (dt * v!) / 10_000_000;
-        aircraft.latitude! += (dt * v!) / 10_000_000;
 
-        let marker = aircraftIdToMarker.get(id)!;   
-        marker.setLatLng([aircraft.latitude!, aircraft.longitude!]);
-
-        log(aircraft)
-        
-    }
+        updateAircraftPosition(aircraft, dt);
+        updateAircraftMarker(aircraft);
+        log(aircraft);
+    }   
     startTime = timestamp;
-    requestAnimationFrame(updateMap);
+    requestAnimationFrame(update);
+}
+
+function updateAircraftPosition(aircraft: AircraftInfo, dt: number) {
+    aircraft.latitude! += (dt * aircraft.velocity!) / 10_000_00;
+    aircraft.longitude! += (dt * aircraft.velocity!) / 10_000_00;
+}
+
+function updateAircraftMarker(aircraft: AircraftInfo) {
+    if (aircraft.latitude! < minLatitude ||
+        aircraft.latitude! > maxLatitude ||
+        aircraft.longitude! < minLongitude ||
+        aircraft.longitude! > maxLongitude)
+        {
+            // remove marker from map
+            map.removeLayer(aircraftIdToMarker.get(aircraft.icao24)!);
+
+            // remove marker from hashmap
+            aircraftIdToMarker.delete(aircraft.icao24);
+        }
+    else {
+        let marker = aircraftIdToMarker.get(aircraft.icao24)!;
+        marker.setLatLng([aircraft.latitude!, aircraft.longitude!]);
+    }
+    
 }
 
 function log(aircraft: AircraftInfo) {
@@ -115,3 +140,7 @@ function log(aircraft: AircraftInfo) {
             true_track = ${aircraft.true_track} °`
             );
 }
+
+// now have the task of updating the aircrafts position realistically
+// also have to decide what to do when they leave the area
+// should we stop rendering them?

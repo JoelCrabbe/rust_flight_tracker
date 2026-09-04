@@ -1,8 +1,7 @@
 use anyhow::Result;
 
-use crate::Coordinates;
+use crate::MinMaxLatLng;
 use crate::prelude::*;
-use crate::utils;
 
 #[derive(Clone)]
 pub struct OpenSkyNetworkClient {
@@ -18,15 +17,18 @@ impl OpenSkyNetworkClient {
         }
     }
 
-    pub async fn find_aircraft(&mut self, coordinates: Coordinates) -> Result<AircraftData> {
-        let (min_lat, max_lat) = utils::get_min_max(&coordinates.latitudes);
-        let (min_long, max_long) = utils::get_min_max(&coordinates.longitudes);
-        let area = BoundingBox::new(min_lat, max_lat, min_long, max_long);
+    pub async fn find_aircraft(&mut self, coordinates: MinMaxLatLng) -> Result<AircraftData> {
+        let area = BoundingBox::new(
+            coordinates.min_latitude,
+            coordinates.max_latitude,
+            coordinates.min_longitude,
+            coordinates.max_longitude,
+            );
 
         let mut url = "https://opensky-network.org/api/states/all?".to_string();
         let filter = format!(
             "lamin={}&lomin={}&lamax={}&lomax={}",
-            area.min_lat, area.min_long, area.max_lat, area.max_long
+            area.min_latitude, area.min_longitude, area.max_latitude, area.max_longitude
         );
 
         url.push_str(&filter);

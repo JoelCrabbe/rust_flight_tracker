@@ -10,6 +10,7 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
+use serde_json::from_str;
 use tower_http::cors::CorsLayer;
 
 mod aircraft_structures;
@@ -22,16 +23,26 @@ mod token;
 mod utils;
 
 #[derive(Deserialize, Debug)]
-pub struct Coordinates {
-    pub latitudes: Vec<f64>,
-    pub longitudes: Vec<f64>,
+pub struct MinMaxLatLng {
+    #[serde(rename = "minLatitude")]
+    pub min_latitude: f64,
+
+    #[serde(rename = "maxLatitude")]
+    pub max_latitude: f64,
+
+    #[serde(rename = "minLongitude")]
+    pub min_longitude: f64,
+
+    #[serde(rename = "maxLongitude")]
+    pub max_longitude: f64,
 }
 
 async fn handler(
     State(mut state): State<OpenSkyNetworkClient>,
-    Json(coordinates): Json<Coordinates>,
+    Json(coordinates): Json<MinMaxLatLng>,
 ) -> Json<AircraftData> {
     let data = state.find_aircraft(coordinates).await.unwrap();
+    utils::save_data_to_file(&data, "response.json");
     Json(data)
 }
 
@@ -41,28 +52,9 @@ async fn test() -> &'static str {
 
 async fn test_handler() -> Json<AircraftData> {
     println!("received request, sending example data");
-    Json(AircraftData {
-        states: Some(vec![AircraftInfo {
-            icao24: "44029f".to_string(),
-            callsign: Some("AUA20C  ".to_string()),
-            origin_country: "Austria".to_string(),
-            time_position: Some(1788117821),
-            last_contact: 1788117821,
-            longitude: Some(7.4847),
-            latitude: Some(50.9601),
-            baro_altitude: Some(3215.64),
-            on_ground: false,
-            velocity: Some(167.15),
-            true_track: Some(125.35),
-            vertical_rate: Some(4.55),
-            sensors: None,
-            geo_altitude: Some(3360.42),
-            squawk: Some("7657".to_string()),
-            spi: false,
-            position_source: PositionSource::Adsb,
-        }]),
-        time: 123456,
-    })
+    let json_string = std::fs::read_to_string("response.json").unwrap();
+    let example_data = from_str::<AircraftData>(&json_string).unwrap();
+    Json(example_data)
 }
 
 #[tokio::main]

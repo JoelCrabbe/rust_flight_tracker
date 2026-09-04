@@ -1,6 +1,8 @@
-export interface Coordinates {
-    latitudes: number[],
-    longitudes: number[],
+export interface MinMaxLatLong {
+    minLatitude: number,
+    maxLatitude: number,
+    minLongitude: number,
+    maxLongitude: number,
 }
 
 export enum PositionSource {
