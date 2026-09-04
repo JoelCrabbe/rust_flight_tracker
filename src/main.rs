@@ -1,17 +1,11 @@
 // #![allow(unused)]
 
-use crate::{
-    aircraft_structures::{AircraftInfo, PositionSource},
-    prelude::*,
-};
+use crate::prelude::*;
 use anyhow::Result;
-use axum::{
-    Json, Router, debug_handler,
-    extract::State,
-    routing::{get, post},
-};
-use serde_json::from_str;
+use axum::{Router, routing::post};
 use tower_http::cors::CorsLayer;
+
+use request_handlers::{coordinates_handler, test_handler};
 
 mod aircraft_structures;
 mod errors;
@@ -19,43 +13,9 @@ mod open_sky_network_client;
 mod prelude;
 mod query_builder;
 mod regions_of_interest;
+mod request_handlers;
 mod token;
 mod utils;
-
-#[derive(Deserialize, Debug)]
-pub struct MinMaxLatLng {
-    #[serde(rename = "minLatitude")]
-    pub min_latitude: f64,
-
-    #[serde(rename = "maxLatitude")]
-    pub max_latitude: f64,
-
-    #[serde(rename = "minLongitude")]
-    pub min_longitude: f64,
-
-    #[serde(rename = "maxLongitude")]
-    pub max_longitude: f64,
-}
-
-async fn handler(
-    State(mut state): State<OpenSkyNetworkClient>,
-    Json(coordinates): Json<MinMaxLatLng>,
-) -> Json<AircraftData> {
-    let data = state.find_aircraft(coordinates).await.unwrap();
-    utils::save_data_to_file(&data, "response.json");
-    Json(data)
-}
-
-async fn test() -> &'static str {
-    "hello from rust server"
-}
-
-async fn test_handler() -> Json<AircraftData> {
-    println!("received request, sending example data");
-    let json_string = std::fs::read_to_string("response.json").unwrap();
-    let example_data = from_str::<AircraftData>(&json_string).unwrap();
-    Json(example_data)
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -69,9 +29,8 @@ async fn main() -> Result<()> {
     let osnc = OpenSkyNetworkClient::new(token_manager, http_client);
 
     let app = Router::new()
-        .route("/coordinates", post(handler))
-        // .route("/coordinates", post(test_handler))
-        .route("/", get(test))
+        .route("/coordinates", post(coordinates_handler))
+        .route("/test", post(test_handler))
         .layer(CorsLayer::permissive())
         .with_state(osnc);
 

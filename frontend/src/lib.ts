@@ -57,7 +57,7 @@ export async function getCoordinates(event: L.DrawEvents.Created) {
 
     // send http request to rust server
     try {
-        const response = await fetch("http://localhost:3000/coordinates", {
+        const response = await fetch("http://localhost:3000/test", {
             method: "POST",
             headers: { "Content-Type": "Application/json" },
             body: JSON.stringify(payload),
@@ -108,9 +108,12 @@ export function update(timestamp: number) {
     requestAnimationFrame(update);
 }
 
+// now have the task of updating the aircrafts position realistically
+// at the moment all the aircraft move in the same direction for some reason
+// TODO: update aircraft positions realistically
 function updateAircraftPosition(aircraft: AircraftInfo, dt: number) {
-    aircraft.latitude! += (dt * aircraft.velocity!) / 10_000_00;
-    aircraft.longitude! += (dt * aircraft.velocity!) / 10_000_00;
+    aircraft.latitude! += (dt * aircraft.velocity!) / 1_000_000;
+    aircraft.longitude! += (dt * aircraft.velocity!) / 1_000_000;
 }
 
 function updateAircraftMarker(aircraft: AircraftInfo) {
@@ -122,8 +125,9 @@ function updateAircraftMarker(aircraft: AircraftInfo) {
             // remove marker from map
             map.removeLayer(aircraftIdToMarker.get(aircraft.icao24)!);
 
-            // remove marker from hashmap
+            // remove marker from hashmaps
             aircraftIdToMarker.delete(aircraft.icao24);
+            aircraftIdToAircraftInfo.delete(aircraft.icao24);
         }
     else {
         let marker = aircraftIdToMarker.get(aircraft.icao24)!;
@@ -140,7 +144,3 @@ function log(aircraft: AircraftInfo) {
             true_track = ${aircraft.true_track} °`
             );
 }
-
-// now have the task of updating the aircrafts position realistically
-// also have to decide what to do when they leave the area
-// should we stop rendering them?

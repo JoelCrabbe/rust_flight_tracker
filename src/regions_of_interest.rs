@@ -12,7 +12,12 @@ pub struct BoundingBox {
 // alongside the idea of the square box
 
 impl BoundingBox {
-    pub fn new(min_latitude: f64, max_latitude: f64, min_longitude: f64, max_longitude: f64) -> Self {
+    pub fn new(
+        min_latitude: f64,
+        max_latitude: f64,
+        min_longitude: f64,
+        max_longitude: f64,
+    ) -> Self {
         assert_lat(min_latitude);
         assert_lat(max_latitude);
         assert_long(min_longitude);
