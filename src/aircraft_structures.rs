@@ -60,6 +60,7 @@ pub struct AircraftInfo {
     pub squawk: Option<String>,
     pub spi: bool,
     pub position_source: PositionSource,
+    pub category: AircraftCategory,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

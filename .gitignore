@@ -2,3 +2,4 @@
 .env
 response.json
 /frontend/node_modules
+*.Identifier

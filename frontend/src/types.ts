@@ -12,6 +12,30 @@ export enum PositionSource {
     Flarm = 3,
 }
 
+export enum AircraftCategory {
+    NoInfo = 0,
+    NoADSB = 1,
+    Light = 2,
+    Small = 3,
+    Large = 4,
+    HighVortexLarge = 5,
+    Heavy = 6,
+    HighPerformance = 7,
+    Rotorcraft = 8,
+    Glider = 9,
+    LighterThanAir = 10,
+    Parachutist = 11,
+    Ultralight = 12,
+    Reserved = 13,
+    Unmanned = 14,
+    Space = 15,
+    EmergencyVehicle = 16,
+    ServiceVehicle = 17,
+    PointObstacle = 18,
+    ClusterObstacle = 19,
+    LineObstacle = 20,
+}
+
 export interface AircraftInfo {
     icao24: string,
     callsign: string | null,
@@ -30,7 +54,7 @@ export interface AircraftInfo {
     squawk: string | null,
     spi: boolean,
     position_source: PositionSource,
-
+    aircraft_category: AircraftCategory,
 }
 
 export interface AircraftData {

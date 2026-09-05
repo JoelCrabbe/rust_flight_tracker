@@ -22,6 +22,7 @@ pub async fn coordinates_handler(
     State(mut state): State<OpenSkyNetworkClient>,
     Json(coordinates): Json<MinMaxLatLong>,
 ) -> Json<AircraftData> {
+    println!("request for data sent from frontend");
     let data = state.find_aircraft(coordinates).await.unwrap();
     utils::save_data_to_file(&data, "response.json");
     Json(data)

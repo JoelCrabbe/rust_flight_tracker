@@ -58,7 +58,7 @@ impl TokenManager {
             .unwrap()
             .as_secs_f64();
 
-        if now >= self.time_token_was_made + 1770 as f64 {
+        if now >= self.time_token_was_made + 1770_f64 {
             self.update_token().await.unwrap()
         } else {
             self.token.clone() // probably want to avoid clone

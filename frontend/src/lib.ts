@@ -15,8 +15,10 @@ let minLatitude = Infinity;
 let maxLatitude = -Infinity;
 let minLongitude = Infinity;
 let maxLongitude = -Infinity;
+export let payload: MinMaxLatLong;
 
 const earthRadius = 6_371_000;
+export const timeBetweenApiCalls = 10_000;
 
 export function setupMap() {
     map = L.map("map").setView([51.505, -0.09], 4);
@@ -37,7 +39,7 @@ export function setupMap() {
     map.addControl(drawControl);
 }
 
-export async function getCoordinates(event: L.DrawEvents.Created) {
+export async function initializeArea(event: L.DrawEvents.Created) {
     let layer = event.layer as L.Polyline;
     drawnItems.addLayer(layer);
 
@@ -46,42 +48,26 @@ export async function getCoordinates(event: L.DrawEvents.Created) {
             minLatitude = Math.min(minLatitude, corner.lat);
             maxLatitude = Math.max(maxLatitude, corner.lat);
             minLongitude = Math.min(minLongitude, corner.lng);
-            maxLongitude = Math.max(minLongitude, corner.lng);
+            maxLongitude = Math.max(maxLongitude, corner.lng);
         }
     }
 
-    const payload: MinMaxLatLong = {
-        minLatitude,
-        maxLatitude,
-        minLongitude,
-        maxLongitude,
+    payload = {
+    minLatitude,
+    maxLatitude,
+    minLongitude,
+    maxLongitude,
     }
 
-    // send http request to rust server
-    try {
-        const response = await fetch("http://localhost:3000/test", {
-            method: "POST",
-            headers: { "Content-Type": "Application/json" },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            throw new Error("error receving response from rust server");
+    let data: AircraftData = (await fetchData())!;
+    if (data.states !== null) {
+        for (let aircraft of data.states) {
+            addAircraftToMap(aircraft);
         }
-
-        const data: AircraftData = await response.json();
-        if (data.states !== null) {
-            for (let aircraft of data.states) {
-                addAircraftToMap("foo", aircraft);
-            }
-        }
-    }
-    catch (error) {
-        console.log(error);
     }
 }
 
-function addAircraftToMap(imageUrl: string, aircraft: AircraftInfo) {
+function addAircraftToMap(aircraft: AircraftInfo) {
     // the ! ignores the null case, i cant imagine when lat/lng would be null
     // however this could cause bugs if this does happen
     let marker = L.marker([aircraft.latitude!, aircraft.longitude!])
@@ -98,9 +84,7 @@ function addAircraftToMap(imageUrl: string, aircraft: AircraftInfo) {
 
 export function update(timestamp: number) {
     let dt = timestamp - startTime;
-    for (let id of aircraftIdToMarker.keys()) {
-        let aircraft = aircraftIdToAircraftInfo.get(id)!;
-
+    for (let aircraft of aircraftIdToAircraftInfo.values()) {
         updateAircraftPosition(aircraft, dt);
         updateAircraftMarker(aircraft);
         console.log(getInfo(aircraft))
@@ -159,3 +143,38 @@ function getInfo(aircraft: AircraftInfo): string {
 
 // at some point would like to replace markes with actual icons of the aircraft based on what they actually are
 // e.g. helicopter icon for helicopter, glider icon for gliders etc
+// I thought i would be able to get this information via the AircraftCategory field but it looks like most responses
+// have this set to 0 which means no information available, so we cannot identify the type of aircraft that way.
+
+export async function fetchData(): Promise<AircraftData | null> {
+    try {
+        const response = await fetch("http://localhost:3000/coordinates", {
+            method: "POST",
+            headers: { "Content-Type": "Application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error("error receiving response from rust server");
+        }
+
+        const data: AircraftData = await response.json();
+        return data;
+    }
+    catch (error) {
+        console.log(error);
+        return null;
+    }
+}
+
+export async function updateAircraft() {
+    let data: AircraftData = (await fetchData())!;
+    if (data.states !== null) {
+        for (let aircraft of data.states) {
+            if (aircraftIdToMarker.get(aircraft.icao24) === null) {
+                addAircraftToMap(aircraft);
+            }
+            aircraftIdToAircraftInfo.set(aircraft.icao24, aircraft);
+        }
+    }
+}

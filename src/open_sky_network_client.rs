@@ -24,7 +24,7 @@ impl OpenSkyNetworkClient {
             coordinates.max_longitude,
         );
 
-        let mut url = "https://opensky-network.org/api/states/all?".to_string();
+        let mut url = "https://opensky-network.org/api/states/all?extended=1&".to_string();
         let filter = format!(
             "lamin={}&lomin={}&lamax={}&lomax={}",
             area.min_latitude, area.min_longitude, area.max_latitude, area.max_longitude
@@ -38,8 +38,8 @@ impl OpenSkyNetworkClient {
         if response.status().is_success() {
             let area_data = response.json::<AircraftData>().await?;
             return Ok(area_data);
-        } else {
-            panic!("response from OpenSkyNetwork was not successfull");
         }
+        panic!("response from OpenSkyNetwork was not successfull");
+        
     }
 }
