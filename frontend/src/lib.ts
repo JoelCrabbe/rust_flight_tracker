@@ -59,6 +59,8 @@ export async function initializeArea(event: L.DrawEvents.Created) {
     maxLongitude,
     }
 
+    console.log(payload);
+
     let data: AircraftData = (await fetchData())!;
     if (data.states !== null) {
         for (let aircraft of data.states) {
@@ -87,7 +89,7 @@ export function update(timestamp: number) {
     for (let aircraft of aircraftIdToAircraftInfo.values()) {
         updateAircraftPosition(aircraft, dt);
         updateAircraftMarker(aircraft);
-        console.log(getInfo(aircraft))
+        // console.log(getInfo(aircraft))
     }
     startTime = timestamp;
     requestAnimationFrame(update);
@@ -171,7 +173,8 @@ export async function updateAircraft() {
     let data: AircraftData = (await fetchData())!;
     if (data.states !== null) {
         for (let aircraft of data.states) {
-            if (aircraftIdToMarker.get(aircraft.icao24) === null) {
+            aircraftIdToMarker.has
+            if (!aircraftIdToMarker.has(aircraft.icao24)) {
                 addAircraftToMap(aircraft);
             }
             aircraftIdToAircraftInfo.set(aircraft.icao24, aircraft);
