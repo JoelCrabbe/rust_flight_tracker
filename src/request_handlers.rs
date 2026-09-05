@@ -24,7 +24,7 @@ pub async fn coordinates_handler(
 ) -> Json<AircraftData> {
     println!("request for data sent from frontend");
     let data = state.find_aircraft(coordinates).await.unwrap();
-    utils::save_data_to_file(&data, "response.json");
+    // utils::save_data_to_file(&data, "response.json"); // don't really need to update response.json with latest data on every request
     Json(data)
 }
 

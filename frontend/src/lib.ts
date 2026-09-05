@@ -16,6 +16,7 @@ let maxLatitude = -Infinity;
 let minLongitude = Infinity;
 let maxLongitude = -Infinity;
 export let payload: MinMaxLatLong;
+let firstCallMade = false;
 
 const earthRadius = 6_371_000;
 export const timeBetweenApiCalls = 10_000;
@@ -40,6 +41,7 @@ export function setupMap() {
 }
 
 export async function initializeArea(event: L.DrawEvents.Created) {
+    firstCallMade = true;
     let layer = event.layer as L.Polyline;
     drawnItems.addLayer(layer);
 
@@ -170,6 +172,9 @@ export async function fetchData(): Promise<AircraftData | null> {
 }
 
 export async function updateAircraft() {
+    if (!firstCallMade) {
+        return;
+    }
     let data: AircraftData = (await fetchData())!;
     if (data.states !== null) {
         for (let aircraft of data.states) {
@@ -181,3 +186,13 @@ export async function updateAircraft() {
         }
     }
 }
+
+/*
+each api query cost is calculated by the area covered by the box you make on the map
+if the box covers more than 400 square degrees (calculated by bounding box area in sq° = latitude range × longitude range)
+then this request costs 4 tokens, so I can make 1000 of these requests in a day.
+It is not dependent on how many aircraft are in the box, which I thought it would have depended on.
+if latitude and longitude values are not supplied in the query I think it also costs 4 tokens
+increasing how often we request data will make everything more accurate
+but will also use tokens more often
+*/

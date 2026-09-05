@@ -35,6 +35,8 @@ impl OpenSkyNetworkClient {
         let headers = self.token_manager.header().await;
         let response = self.http_client.get(url).headers(headers).send().await?;
 
+        println!("You have {:?} / 4000 tokens remaining", response.headers().get("x-rate-limit-remaining").unwrap());
+
         if response.status().is_success() {
             let area_data = response.json::<AircraftData>().await?;
             return Ok(area_data);
