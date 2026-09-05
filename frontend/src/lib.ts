@@ -10,11 +10,13 @@ export let map: L.Map;
 let drawnItems: L.FeatureGroup;
 let aircraftIdToMarker: Map<string, L.Marker> = new Map();
 let aircraftIdToAircraftInfo: Map<string, AircraftInfo> = new Map();
-let startTime: number = 0;
+let startTime = 0;
 let minLatitude = Infinity;
 let maxLatitude = -Infinity;
 let minLongitude = Infinity;
 let maxLongitude = -Infinity;
+
+const earthRadius = 6_371_000;
 
 export function setupMap() {
     map = L.map("map").setView([51.505, -0.09], 4);
@@ -83,8 +85,7 @@ function addAircraftToMap(imageUrl: string, aircraft: AircraftInfo) {
     // the ! ignores the null case, i cant imagine when lat/lng would be null
     // however this could cause bugs if this does happen
     let marker = L.marker([aircraft.latitude!, aircraft.longitude!])
-    let info = `icao24: ${aircraft.icao24}, Callsign: ${aircraft.callsign}, Origin Country: ${aircraft.origin_country}`;
-
+    let info = getInfo(aircraft);
     marker.addTo(map);
     marker.bindPopup(info);
 
@@ -102,18 +103,26 @@ export function update(timestamp: number) {
 
         updateAircraftPosition(aircraft, dt);
         updateAircraftMarker(aircraft);
-        log(aircraft);
-    }   
+        console.log(getInfo(aircraft))
+    }
     startTime = timestamp;
     requestAnimationFrame(update);
 }
 
-// now have the task of updating the aircrafts position realistically
-// at the moment all the aircraft move in the same direction for some reason
-// TODO: update aircraft positions realistically
+// Updating aircraft's gps coordinates using the Haversine formula
 function updateAircraftPosition(aircraft: AircraftInfo, dt: number) {
-    aircraft.latitude! += (dt * aircraft.velocity!) / 1_000_000;
-    aircraft.longitude! += (dt * aircraft.velocity!) / 1_000_000;
+    let distanceM = dt * 0.001 * aircraft.velocity!;
+    let latR = aircraft.latitude! * (Math.PI / 180);
+    let longR = aircraft.longitude! * (Math.PI / 180);
+    let angle = aircraft.true_track! * (Math.PI / 180);
+    let angularDistance = distanceM / earthRadius;
+    let newLatR = Math.asin(Math.sin(latR) * Math.cos(angularDistance) + Math.cos(latR) * Math.sin(angularDistance) * Math.cos(angle));
+    let dLonR = Math.atan2(Math.sin(angle) * Math.sin(angularDistance) * Math.cos(latR), Math.cos(angularDistance) - Math.sin(latR) * Math.sin(newLatR));
+    let newLongR = longR + dLonR;
+    let newLatD = newLatR * (180 / Math.PI);
+    let newLongD = newLongR * (180 / Math.PI);
+    aircraft.latitude! = newLatD;
+    aircraft.longitude! = newLongD;
 }
 
 function updateAircraftMarker(aircraft: AircraftInfo) {
@@ -132,15 +141,21 @@ function updateAircraftMarker(aircraft: AircraftInfo) {
     else {
         let marker = aircraftIdToMarker.get(aircraft.icao24)!;
         marker.setLatLng([aircraft.latitude!, aircraft.longitude!]);
+        marker.bindPopup(getInfo(aircraft));
     }
-    
 }
 
-function log(aircraft: AircraftInfo) {
-    console.log(`\
-            latitude = ${aircraft.latitude},
-            longitude = ${aircraft.longitude},
-            velocity = ${aircraft.velocity} m/s,
-            true_track = ${aircraft.true_track} °`
-            );
+function getInfo(aircraft: AircraftInfo): string {
+    let mph = aircraft.velocity! * 2.237;
+    let baro_altitude_ft = aircraft.baro_altitude! * 3.281;
+    return `\
+        Callsign = ${aircraft.callsign}
+        Latitude = ${aircraft.latitude!.toFixed(5)}
+        Longitude = ${aircraft.longitude!.toFixed(5)}
+        Ground Speed = ${mph.toFixed(2)} mph
+        Barometric Altitude = ${baro_altitude_ft.toFixed(0)} ft
+        Track = ${aircraft.true_track!} °`
 }
+
+// at some point would like to replace markes with actual icons of the aircraft based on what they actually are
+// e.g. helicopter icon for helicopter, glider icon for gliders etc
