@@ -4,13 +4,12 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 
-import { MinMaxLatLong, AircraftData, AircraftInfo } from "./types";
+import { MinMaxLatLong, AircraftData, AircraftInfo, } from "./types";
 
 export let map: L.Map;
 let drawnItems: L.FeatureGroup;
 
-let aircraftIdToMarker: Map<string, L.Marker> = new Map();
-let aircraftIdToAircraftInfo: Map<string, AircraftInfo> = new Map();
+let monitoredAircraft: Map<string, [L.Marker, AircraftInfo]> = new Map();
 
 let startTime = 0;
 
@@ -47,57 +46,63 @@ export function setupMap() {
 }
 
 export async function initializeArea(event: L.DrawEvents.Created) {
-    firstCallMade = true;
-    let layer = event.layer as L.Polyline;
-    drawnItems.addLayer(layer);
+    switch (event.layerType) {
+        case "polyline": {}
+        case "polygon": {}
+        case "circle": {}
+        case "marker": {}
+        case "rectangle": {
+            firstCallMade = true;
+            let rectangle = event.layer as L.Rectangle;
+            // I'm unsure as to what drawnItems actually does, I know we add the toolbar to it but do I need to add everything I add
+            // to the map the the drawnItems FeatureGroup?
+            drawnItems.addLayer(rectangle); 
+            for (let corners of rectangle.getLatLngs() as L.LatLng[][]) {
+                for (let corner of corners) {
+                    minLatitude = Math.min(minLatitude, corner.lat);
+                    maxLatitude = Math.max(maxLatitude, corner.lat);
+                    minLongitude = Math.min(minLongitude, corner.lng);
+                    maxLongitude = Math.max(maxLongitude, corner.lng);
+                }
+            }
+            payload = { minLatitude, maxLatitude, minLongitude, maxLongitude, };
+            console.log(payload);
 
-    for (let corners of layer.getLatLngs() as L.LatLng[][]) {
-        for (let corner of corners) {
-            minLatitude = Math.min(minLatitude, corner.lat);
-            maxLatitude = Math.max(maxLatitude, corner.lat);
-            minLongitude = Math.min(minLongitude, corner.lng);
-            maxLongitude = Math.max(maxLongitude, corner.lng);
-        }
-    }
-
-    payload = {
-    minLatitude,
-    maxLatitude,
-    minLongitude,
-    maxLongitude,
-    }
-
-    console.log(payload);
-
-    let data: AircraftData = (await fetchData())!;
-    if (data.states !== null) {
-        for (let aircraft of data.states) {
-            addAircraftToMap(aircraft);
+            let data = await fetchData();
+            if (data) {
+                if (data.states) {
+                    for (let aircraft of data.states) {
+                        addAircraftToMap(aircraft);
+                    }
+                }
+            }
         }
     }
 }
 
 function addAircraftToMap(aircraft: AircraftInfo) {
-    // the ! ignores the null case, i cant imagine when lat/lng would be null
-    // however this could cause bugs if this does happen
-    let marker = L.marker([aircraft.latitude!, aircraft.longitude!])
+    // if an aircraft is lacking any of these fields we will simply not render it to the map
+    // as these are required for knowing and updating position
+    if (!aircraft.latitude || !aircraft.longitude || !aircraft.velocity || !aircraft.true_track) {
+        return;
+    }
+    let marker = L.marker([aircraft.latitude, aircraft.longitude])
     let info = getInfo(aircraft);
     marker.addTo(map);
     marker.bindPopup(info);
 
-    // icao24 -> marker on map
-    aircraftIdToMarker.set(aircraft.icao24, marker);
+    // Note: we only reach the code down here if the aircraft has a latitude, longitude, velocity, true_track and is on the map
+    // this guarantees that for every entry in these hashmaps, it is safe to access these fields using !
 
-    // icao24 -> info of aircraft
-    aircraftIdToAircraftInfo.set(aircraft.icao24, aircraft);
+    // associate this aircrafts id with a marker on the map on its information
+    monitoredAircraft.set(aircraft.icao24, [marker, aircraft]);
 }
 
 export function update(timestamp: number) {
     let dt = timestamp - startTime;
-    for (let aircraft of aircraftIdToAircraftInfo.values()) {
+    for (let [_, aircraft] of monitoredAircraft.values()) {
         updateAircraftPosition(aircraft, dt);
         updateAircraftMarker(aircraft);
-        // console.log(getInfo(aircraft))
     }
     startTime = timestamp;
     requestAnimationFrame(update);
@@ -120,41 +125,41 @@ function updateAircraftPosition(aircraft: AircraftInfo, dt: number) {
 }
 
 function updateAircraftMarker(aircraft: AircraftInfo) {
+    let [marker, _] = monitoredAircraft.get(aircraft.icao24)!;
+
     if (aircraft.latitude! < minLatitude ||
         aircraft.latitude! > maxLatitude ||
         aircraft.longitude! < minLongitude ||
         aircraft.longitude! > maxLongitude)
         {
-            // remove marker from map
-            map.removeLayer(aircraftIdToMarker.get(aircraft.icao24)!);
-
-            // remove aircraft from hashmaps
-            aircraftIdToMarker.delete(aircraft.icao24);
-            aircraftIdToAircraftInfo.delete(aircraft.icao24);
+            // remove marker from map and hashmap of aircraft we are monitoring
+            // the aircraft has left the area we are monitoring, we are no longer interested in it
+            map.removeLayer(marker);
+            monitoredAircraft.delete(aircraft.icao24);
         }
     else {
-        let marker = aircraftIdToMarker.get(aircraft.icao24)!;
         marker.setLatLng([aircraft.latitude!, aircraft.longitude!]);
         marker.bindPopup(getInfo(aircraft));
     }
 }
 
 function getInfo(aircraft: AircraftInfo): string {
-    let mph = aircraft.velocity! * 2.237;
-    let baro_altitude_ft = aircraft.baro_altitude! * 3.281;
+    // when we call this function we know aircraft has a latitude and longitude
+    // hence we can ignore the null cases and use !
+    let callsign = aircraft.callsign ? aircraft.callsign : "N/A";
+    let latitude = aircraft.latitude!.toFixed(5);
+    let longitude = aircraft.longitude!.toFixed(5);
+    let mph = aircraft.velocity ? (aircraft.velocity * 2.237).toFixed(2).toString() + " mph" : "N/A";
+    let baro_altitude_ft = aircraft.baro_altitude ? (aircraft.baro_altitude * 3.281).toFixed(0).toString() + " ft" : "N/A";
+    let true_track = aircraft.true_track ? aircraft.true_track.toString() + " °" : "N/A";
     return `\
-        Callsign = ${aircraft.callsign}
-        Latitude = ${aircraft.latitude!.toFixed(5)}
-        Longitude = ${aircraft.longitude!.toFixed(5)}
-        Ground Speed = ${mph.toFixed(2)} mph
-        Barometric Altitude = ${baro_altitude_ft.toFixed(0)} ft
-        Track = ${aircraft.true_track!} °`
+        Callsign = ${callsign}
+        Latitude = ${latitude}
+        Longitude = ${longitude}
+        Ground Speed = ${mph}
+        Barometric Altitude = ${baro_altitude_ft}
+        Track = ${true_track}`
 }
-
-// at some point would like to replace markes with actual icons of the aircraft based on what they actually are
-// e.g. helicopter icon for helicopter, glider icon for gliders etc
-// I thought i would be able to get this information via the AircraftCategory field but it looks like most responses
-// have this set to 0 which means no information available, so we cannot identify the type of aircraft that way.
 
 export async function fetchData(): Promise<AircraftData | null> {
     try {
@@ -165,29 +170,39 @@ export async function fetchData(): Promise<AircraftData | null> {
         });
 
         if (!response.ok) {
-            throw new Error("error receiving response from rust server");
+            // when to throw an error vs print it
+            console.error(`error receiving response from the rust server, status code: ${response.status}`);
+            return null;
         }
-
-        const data: AircraftData = await response.json();
-        return data;
-    }
-    catch (error) {
-        console.log(error);
+        try {
+            const data: AircraftData = await response.json();
+            return data;
+        } catch (error) {
+            console.error("error parsing the response into the AircraftData struct");
+            return null;
+        }
+    } catch (error) {
+        console.error(error);
         return null;
     }
 }
 
-export async function updateAircraft() {
+export async function updateAircrafts() {
     if (!firstCallMade) {
         return;
     }
-    let data: AircraftData = (await fetchData())!;
-    if (data.states !== null) {
-        for (let aircraft of data.states) {
-            if (!aircraftIdToMarker.has(aircraft.icao24)) {
-                addAircraftToMap(aircraft);
+    let data = await fetchData();
+    if (data) {
+        if (data.states) {
+            for (let aircraft of data.states) {
+                if (!monitoredAircraft.has(aircraft.icao24)) {
+                    addAircraftToMap(aircraft);
+                }
+                // update this aircrafts info to the data we just retrieved
+                let [marker, _] = monitoredAircraft.get(aircraft.icao24)!;
+                monitoredAircraft.set(aircraft.icao24, [marker, aircraft]);
             }
-            aircraftIdToAircraftInfo.set(aircraft.icao24, aircraft);
+
         }
     }
 }
@@ -203,4 +218,6 @@ but will also use tokens more often
 
 Tomorrow maybe we should focus on error handling, starting with the rust code especially all of the unwraps
 look into if it is possible to draw lines representing the path each plane/marker makes once it is in the airspace
+
+TODO: try to see if there is a better way to handle errors for async await
 */

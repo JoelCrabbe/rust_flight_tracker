@@ -25,9 +25,10 @@ pub async fn coordinates_handler(
     println!("request for data sent from frontend");
     let data = state.find_aircraft(payload).await.unwrap();
 
-    if let Err(e) = utils::save_data_to_file(&data, "response.json") {
-        eprintln!("{e}");
-    }
+    // don't need to keep writing data to file
+    // if let Err(e) = utils::save_data_to_file(&data, "response.json") {
+    //     eprintln!("{e}");
+    // }
     Json(data)
 }
 

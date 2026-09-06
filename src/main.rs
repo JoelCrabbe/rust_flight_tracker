@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
         Ok(token) => token,
         Err(e) => {
             eprintln!("{e}");
-            std::process::exit(1); // not about this error handling
+            std::process::exit(1); // not sure about this error handling
         }
     };
 
