@@ -1,9 +1,3 @@
-/*
-* The AicraftCategory field in the API response is only provided
-* if the `extended` property is provided in the request URL.
-* At the moment, I have not included this field.
-*/
-
 use crate::prelude::*;
 
 #[derive(Serialize_repr, Deserialize_repr, Debug)]

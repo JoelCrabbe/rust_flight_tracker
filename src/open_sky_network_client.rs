@@ -16,32 +16,44 @@ impl OpenSkyNetworkClient {
         }
     }
 
-    pub async fn find_aircraft(&mut self, coordinates: MinMaxLatLong) -> Result<AircraftData> {
+    pub async fn find_aircraft(&mut self, payload: MinMaxLatLong) -> Result<AircraftData> {
         let area = BoundingBox::new(
-            coordinates.min_latitude,
-            coordinates.max_latitude,
-            coordinates.min_longitude,
-            coordinates.max_longitude,
+            payload.min_latitude,
+            payload.max_latitude,
+            payload.min_longitude,
+            payload.max_longitude,
         );
 
-        let mut url = "https://opensky-network.org/api/states/all?extended=1&".to_string();
+        let mut url = "https://opensky-network.org/api/states/all?".to_string();
         let filter = format!(
-            "lamin={}&lomin={}&lamax={}&lomax={}",
+            "extended=1&lamin={}&lomin={}&lamax={}&lomax={}",
             area.min_latitude, area.min_longitude, area.max_latitude, area.max_longitude
         );
 
         url.push_str(&filter);
 
         let headers = self.token_manager.header().await;
-        let response = self.http_client.get(url).headers(headers).send().await?;
+        let response = self
+            .http_client
+            .get(url)
+            .headers(headers)
+            .send()
+            .await
+            .context("problem retrieving data from OpenSkyNetwork server")?;
 
-        println!("You have {:?} / 4000 tokens remaining", response.headers().get("x-rate-limit-remaining").unwrap());
+        // println!(
+        //     "You have {:?} / 4000 tokens remaining",
+        //     response.headers().get("x-rate-limit-remaining").unwrap()
+        // );
 
         if response.status().is_success() {
-            let area_data = response.json::<AircraftData>().await?;
+            let area_data = response
+                .json::<AircraftData>()
+                .await
+                .context("problem deserializing the OpenSkyNetwork response into json")?;
             return Ok(area_data);
         }
-        panic!("response from OpenSkyNetwork was not successfull");
-        
+        // TODO: change this, although im not sure what to do here
+        panic!("response from OpenSkyNetwork was not successful");
     }
 }

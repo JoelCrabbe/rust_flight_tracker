@@ -8,26 +8,32 @@ import { MinMaxLatLong, AircraftData, AircraftInfo } from "./types";
 
 export let map: L.Map;
 let drawnItems: L.FeatureGroup;
+
 let aircraftIdToMarker: Map<string, L.Marker> = new Map();
 let aircraftIdToAircraftInfo: Map<string, AircraftInfo> = new Map();
+
 let startTime = 0;
+
 let minLatitude = Infinity;
 let maxLatitude = -Infinity;
 let minLongitude = Infinity;
 let maxLongitude = -Infinity;
+
 export let payload: MinMaxLatLong;
 let firstCallMade = false;
 
 const earthRadius = 6_371_000;
-export const timeBetweenApiCalls = 10_000;
+export const timeBetweenApiCalls = 5_000;
 
 export function setupMap() {
     map = L.map("map").setView([51.505, -0.09], 4);
+
+    // revealing an api key, must we do this? does it matter? can we hide it in an environment variable?
+    L.tileLayer("https://api.maptiler.com/maps/hybrid-v4/256/{z}/{x}/{y}.jpg?key=DoZE0UNdz0voU0cNhss2", {
+        attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(map);
     
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "&copy; OpenStreetMap contributors"
-            }).addTo(map);
-    
+
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
@@ -122,7 +128,7 @@ function updateAircraftMarker(aircraft: AircraftInfo) {
             // remove marker from map
             map.removeLayer(aircraftIdToMarker.get(aircraft.icao24)!);
 
-            // remove marker from hashmaps
+            // remove aircraft from hashmaps
             aircraftIdToMarker.delete(aircraft.icao24);
             aircraftIdToAircraftInfo.delete(aircraft.icao24);
         }
@@ -178,7 +184,6 @@ export async function updateAircraft() {
     let data: AircraftData = (await fetchData())!;
     if (data.states !== null) {
         for (let aircraft of data.states) {
-            aircraftIdToMarker.has
             if (!aircraftIdToMarker.has(aircraft.icao24)) {
                 addAircraftToMap(aircraft);
             }
@@ -195,4 +200,7 @@ It is not dependent on how many aircraft are in the box, which I thought it woul
 if latitude and longitude values are not supplied in the query I think it also costs 4 tokens
 increasing how often we request data will make everything more accurate
 but will also use tokens more often
+
+Tomorrow maybe we should focus on error handling, starting with the rust code especially all of the unwraps
+look into if it is possible to draw lines representing the path each plane/marker makes once it is in the airspace
 */

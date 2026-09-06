@@ -20,11 +20,14 @@ pub struct MinMaxLatLong {
 
 pub async fn coordinates_handler(
     State(mut state): State<OpenSkyNetworkClient>,
-    Json(coordinates): Json<MinMaxLatLong>,
+    Json(payload): Json<MinMaxLatLong>,
 ) -> Json<AircraftData> {
     println!("request for data sent from frontend");
-    let data = state.find_aircraft(coordinates).await.unwrap();
-    // utils::save_data_to_file(&data, "response.json"); // don't really need to update response.json with latest data on every request
+    let data = state.find_aircraft(payload).await.unwrap();
+
+    if let Err(e) = utils::save_data_to_file(&data, "response.json") {
+        eprintln!("{e}");
+    }
     Json(data)
 }
 
