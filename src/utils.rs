@@ -14,7 +14,7 @@ pub fn update_env_file(token_manager: &TokenManager) -> Result<()> {
             let new_line = format!("TIME_TOKEN_WAS_MADE={}", token_manager.time_token_was_made);
             new_contents.push(new_line);
         } else {
-            new_contents.push(format!("{line}"));
+            new_contents.push(line.to_string());
         }
     }
     let updated_file_contents = new_contents.join("\n");
@@ -51,4 +51,3 @@ pub fn assert_long(long: f64) {
         "longitude must be between -180 and 180 degrees. {long} does not fit these requirements",
     );
 }
-

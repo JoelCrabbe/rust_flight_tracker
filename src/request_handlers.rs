@@ -1,7 +1,6 @@
 use axum::{Json, extract::State};
 
 use crate::prelude::*;
-use crate::utils;
 
 #[derive(Deserialize, Debug)]
 pub struct MinMaxLatLong {
@@ -22,14 +21,13 @@ pub async fn coordinates_handler(
     State(mut state): State<OpenSkyNetworkClient>,
     Json(payload): Json<MinMaxLatLong>,
 ) -> Json<AircraftData> {
-    println!("request for data sent from frontend");
-    let data = state.find_aircraft(payload).await.unwrap();
-
-    // don't need to keep writing data to file
-    // if let Err(e) = utils::save_data_to_file(&data, "response.json") {
-    //     eprintln!("{e}");
-    // }
-    Json(data)
+    match state.find_aircraft(payload).await {
+        Ok(data) => Json(data),
+        Err(e) => {
+            eprintln!("{e}");
+            Json(AircraftData::default())
+        }
+    }
 }
 
 pub async fn test_handler() -> Json<AircraftData> {

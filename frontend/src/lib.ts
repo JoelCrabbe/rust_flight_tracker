@@ -37,6 +37,13 @@ export function setupMap() {
     map.addLayer(drawnItems);
 
     let drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                polygon: false,
+                circle: false,
+                marker: false,
+                circlemarker: false,
+            },
             edit: {
                 featureGroup: drawnItems,
             }
@@ -202,7 +209,6 @@ export async function updateAircrafts() {
                 let [marker, _] = monitoredAircraft.get(aircraft.icao24)!;
                 monitoredAircraft.set(aircraft.icao24, [marker, aircraft]);
             }
-
         }
     }
 }
@@ -216,7 +222,6 @@ if latitude and longitude values are not supplied in the query I think it also c
 increasing how often we request data will make everything more accurate
 but will also use tokens more often
 
-Tomorrow maybe we should focus on error handling, starting with the rust code especially all of the unwraps
 look into if it is possible to draw lines representing the path each plane/marker makes once it is in the airspace
 
 TODO: try to see if there is a better way to handle errors for async await

@@ -6,7 +6,7 @@ pub use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use crate::aircraft_structures::AircraftData;
-pub use crate::utils::{assert_lat, assert_long};
 pub use crate::open_sky_network_client::OpenSkyNetworkClient;
 pub use crate::regions_of_interest::BoundingBox;
 pub use crate::token::TokenManager;
+pub use crate::utils::{assert_lat, assert_long};
