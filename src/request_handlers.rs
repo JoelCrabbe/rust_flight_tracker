@@ -21,6 +21,7 @@ pub async fn coordinates_handler(
     State(mut state): State<OpenSkyNetworkClient>,
     Json(payload): Json<MinMaxLatLong>,
 ) -> Json<AircraftData> {
+    println!("request for data come in");
     match state.find_aircraft(payload).await {
         Ok(data) => Json(data),
         Err(e) => {
