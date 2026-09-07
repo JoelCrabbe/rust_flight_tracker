@@ -31,9 +31,9 @@ async function periodicUpdate() {
 function update(timestamp: number) {
     let dt = timestamp - time;
     for (let area of areas) {
-        for (let [_, aircraft] of area.monitoredAircraft.values()) {
+        for (let [_, aircraft, __] of area.monitoredAircraft.values()) {
             area.updateAircraftPosition(aircraft, dt);
-            area.updateAircraftMarker(aircraft);
+            area.updateAircraftMarkerAndPath(aircraft);
         }
     }
     time = timestamp;

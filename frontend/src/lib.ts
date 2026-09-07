@@ -41,7 +41,7 @@ export function setupMap() {
 }
 
 export class Area {
-    monitoredAircraft: Map<string, [L.Marker, AircraftInfo]>;
+    monitoredAircraft: Map<string, [L.Marker, AircraftInfo, L.Polyline, L.CircleMarker[]]>;
     firstCallMade: boolean;
     minLatitude: number;
     maxLatitude: number;
@@ -84,7 +84,9 @@ export class Area {
                 if (data) {
                     if (data.states) {
                         for (let aircraft of data.states) {
-                            this.addAircraftToMap(aircraft);
+                            if (aircraft.latitude && aircraft.longitude && aircraft.velocity && aircraft.true_track) {
+                                this.addAircraftToMap(aircraft);
+                            }
                         }
                     }
                 }
@@ -93,15 +95,34 @@ export class Area {
     }
 
     addAircraftToMap(aircraft: AircraftInfo) {
-        if (!aircraft.latitude || !aircraft.longitude || !aircraft.velocity || !aircraft.true_track) {
-            return;
-        }
-        let marker = L.marker([aircraft.latitude, aircraft.longitude]);
+        let marker = L.marker([aircraft.latitude!, aircraft.longitude!]);
         let info = getInfo(aircraft);
         marker.addTo(map);
         marker.bindPopup(info);
 
-        this.monitoredAircraft.set(aircraft.icao24, [marker, aircraft]);
+        let path = L.polyline([L.latLng(aircraft.latitude!, aircraft.longitude!)], { color: colorFromAltitude(aircraft.baro_altitude)});
+        // path.redraw()
+
+        let datapoints: L.CircleMarker[] = [];
+
+        // add a small marker at the coordinates when real data from api came in
+        datapoints.push(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1}));
+
+        marker.addEventListener("popupopen", () => {
+            map.addLayer(path);
+            for (let dp of datapoints) {
+                map.addLayer(dp);
+            }
+        });
+
+        marker.addEventListener("popupclose", () => {
+            map.removeLayer(path);
+            for (let dp of datapoints) {
+                map.removeLayer(dp);
+            }
+        });
+
+        this.monitoredAircraft.set(aircraft.icao24, [marker, aircraft, path, datapoints]);
     }
 
     updateAircraftPosition(aircraft: AircraftInfo, dt: number) {
@@ -119,8 +140,8 @@ export class Area {
         aircraft.longitude! = newLongD;
     }
 
-    updateAircraftMarker(aircraft: AircraftInfo) {
-        let [marker, _] = this.monitoredAircraft.get(aircraft.icao24)!;
+    updateAircraftMarkerAndPath(aircraft: AircraftInfo) {
+        let [marker, _, path, datapoints] = this.monitoredAircraft.get(aircraft.icao24)!;
     
         if (aircraft.latitude! < this.minLatitude ||
             aircraft.latitude! > this.maxLatitude ||
@@ -130,11 +151,17 @@ export class Area {
                 // remove marker from map and hashmap of aircraft we are monitoring
                 // the aircraft has left the area we are monitoring, we are no longer interested in it
                 map.removeLayer(marker);
+                map.removeLayer(path);
+                for (let dp of datapoints) {
+                    map.removeLayer(dp);
+                }
+
                 this.monitoredAircraft.delete(aircraft.icao24);
             }
         else {
             marker.setLatLng([aircraft.latitude!, aircraft.longitude!]);
             marker.bindPopup(getInfo(aircraft));
+            path.addLatLng(L.latLng(aircraft.latitude!, aircraft.longitude!));
         }
     }
 
@@ -147,13 +174,15 @@ export class Area {
             if (data.states) {
                 for (let aircraft of data.states) {
                     if (!this.monitoredAircraft.has(aircraft.icao24)) {
-                        this.addAircraftToMap(aircraft);
+                        if (aircraft.latitude && aircraft.longitude && aircraft.velocity && aircraft.true_track) {
+                            this.addAircraftToMap(aircraft);
+                        }
                     } else {
                         // update this aircrafts info to the data we just retrieved
-                        let [marker, _] = this.monitoredAircraft.get(aircraft.icao24)!;
-                        this.monitoredAircraft.set(aircraft.icao24, [marker, aircraft]);
-                    }
-                    
+                        let [marker, _, path, datapoints] = this.monitoredAircraft.get(aircraft.icao24)!;
+                        this.monitoredAircraft.set(aircraft.icao24, [marker, aircraft, path, datapoints]);
+                        datapoints.push(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1 }));
+                    }                
                 }
             }
         }
@@ -222,3 +251,23 @@ function getMinMax(latlngArray: L.LatLng[][]): number[] {
         maxLongitude,
     ];
 }
+
+function colorFromAltitude(altitude: number | null): string {
+    if (altitude == null) { return "#000000" };
+    if (altitude < 100) { return "#ffffff" };
+    if (altitude < 300) { return "#f0ff00" };
+    if (altitude < 2_000) { return "#00ff9c" };
+    if (altitude < 3_500) { return "#00eaff" };
+    if (altitude < 5_500) { return "#0077ff" };
+    if (altitude < 8_500) { return "#2200ff" };
+    if (altitude < 10_500) { return "#7700ff" };
+    if (altitude < 12_500) { return "#ae00ff" };
+    return "#ff0000";
+}
+
+/*
+issues at the moment are:
+aircraft can still jump around quite a bit when new data comes in which makes it seem like the interpreted position of the aircraft
+in the 5 seconds we don't have data isn't very accurate
+*/
+
