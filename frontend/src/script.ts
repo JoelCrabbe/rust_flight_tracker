@@ -2,8 +2,6 @@ import L from "leaflet";
 import { setupMap, map, Area, timeBetweenApiCalls } from "./lib"
 
 let time = 0;
-// I think starting the time at 0 means the first dt will be the number of milliseconds the program has been running
-// which means when we update position there could be a big jump as the data is as old as the program has been running
 
 setupMap();
 
@@ -31,7 +29,7 @@ async function periodicUpdate() {
 function update(timestamp: number) {
     let dt = timestamp - time;
     for (let area of areas) {
-        for (let [_, aircraft, __] of area.monitoredAircraft.values()) {
+        for (let [aircraft, _] of area.monitoredAircraft.values()) {
             area.updateAircraftPosition(aircraft, dt);
             area.updateAircraftMarkerAndPath(aircraft);
         }

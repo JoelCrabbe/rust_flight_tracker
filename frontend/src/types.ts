@@ -61,3 +61,9 @@ export interface AircraftData {
     states: AircraftInfo[] | null,
     time: number,
 }
+
+export interface AircraftUI {
+    marker: L.Marker,
+    path: L.Polyline,
+    datapoints: L.FeatureGroup<L.CircleMarker>,
+}

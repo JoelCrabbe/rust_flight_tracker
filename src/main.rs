@@ -45,3 +45,7 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
+/*
+see what type of tests we can write for this application
+*/

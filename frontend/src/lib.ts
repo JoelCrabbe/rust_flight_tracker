@@ -4,10 +4,10 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 
-import { AircraftData, AircraftInfo, MinMaxLatLong } from "./types";
+import { AircraftData, AircraftInfo, MinMaxLatLong, AircraftUI } from "./types";
 
 const earthRadius = 6_371_000;
-export const timeBetweenApiCalls = 5_000;
+export const timeBetweenApiCalls = 6_000;
 
 export let map: L.Map;
 let drawnItems: L.FeatureGroup;
@@ -41,13 +41,13 @@ export function setupMap() {
 }
 
 export class Area {
-    monitoredAircraft: Map<string, [L.Marker, AircraftInfo, L.Polyline, L.CircleMarker[]]>;
+    monitoredAircraft: Map<string, [AircraftInfo, AircraftUI]>;
     firstCallMade: boolean;
     minLatitude: number;
     maxLatitude: number;
     minLongitude: number;
     maxLongitude: number;
-    payload: MinMaxLatLong;
+    payload: MinMaxLatLong | null;
 
     constructor() {
         this.monitoredAircraft = new Map();
@@ -56,7 +56,7 @@ export class Area {
         this.maxLatitude = -Infinity;
         this.minLongitude = Infinity;
         this.maxLongitude = -Infinity;
-        this.payload = { minLatitude: 0, maxLatitude: 0, minLongitude: 0, maxLongitude: 0, };
+        this.payload = null;
     }
 
     async initializeArea(event: L.DrawEvents.Created) {
@@ -97,32 +97,29 @@ export class Area {
     addAircraftToMap(aircraft: AircraftInfo) {
         let marker = L.marker([aircraft.latitude!, aircraft.longitude!]);
         let info = getInfo(aircraft);
-        marker.addTo(map);
         marker.bindPopup(info);
+        marker.addTo(map);
 
         let path = L.polyline([L.latLng(aircraft.latitude!, aircraft.longitude!)], { color: colorFromAltitude(aircraft.baro_altitude)});
-        // path.redraw()
 
-        let datapoints: L.CircleMarker[] = [];
-
+        let datapoints = new L.FeatureGroup<L.CircleMarker>();
         // add a small marker at the coordinates when real data from api came in
-        datapoints.push(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1}));
+        datapoints.addLayer(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1}));
+
 
         marker.addEventListener("popupopen", () => {
             map.addLayer(path);
-            for (let dp of datapoints) {
-                map.addLayer(dp);
-            }
+            map.addLayer(datapoints);
         });
 
         marker.addEventListener("popupclose", () => {
             map.removeLayer(path);
-            for (let dp of datapoints) {
-                map.removeLayer(dp);
-            }
+            map.removeLayer(datapoints);
         });
 
-        this.monitoredAircraft.set(aircraft.icao24, [marker, aircraft, path, datapoints]);
+        let aircraftUI: AircraftUI = { marker, path, datapoints };
+        this.monitoredAircraft.set(aircraft.icao24, [aircraft, aircraftUI]);
+
     }
 
     updateAircraftPosition(aircraft: AircraftInfo, dt: number) {
@@ -130,9 +127,9 @@ export class Area {
         let latR = aircraft.latitude! * (Math.PI / 180);
         let longR = aircraft.longitude! * (Math.PI / 180);
         let angle = aircraft.true_track! * (Math.PI / 180);
-        let angularDistance = distanceM / earthRadius;
-        let newLatR = Math.asin(Math.sin(latR) * Math.cos(angularDistance) + Math.cos(latR) * Math.sin(angularDistance) * Math.cos(angle));
-        let dLonR = Math.atan2(Math.sin(angle) * Math.sin(angularDistance) * Math.cos(latR), Math.cos(angularDistance) - Math.sin(latR) * Math.sin(newLatR));
+        let angularDistanceM = distanceM / earthRadius;
+        let newLatR = Math.asin(Math.sin(latR) * Math.cos(angularDistanceM) + Math.cos(latR) * Math.sin(angularDistanceM) * Math.cos(angle));
+        let dLonR = Math.atan2(Math.sin(angle) * Math.sin(angularDistanceM) * Math.cos(latR), Math.cos(angularDistanceM) - Math.sin(latR) * Math.sin(newLatR));
         let newLongR = longR + dLonR;
         let newLatD = newLatR * (180 / Math.PI);
         let newLongD = newLongR * (180 / Math.PI);
@@ -141,26 +138,26 @@ export class Area {
     }
 
     updateAircraftMarkerAndPath(aircraft: AircraftInfo) {
-        let [marker, _, path, datapoints] = this.monitoredAircraft.get(aircraft.icao24)!;
-    
+        let [_, aircraftUI] = this.monitoredAircraft.get(aircraft.icao24)!;
+        let marker = aircraftUI.marker;
+        let path = aircraftUI.path;
+        let datapoints = aircraftUI.datapoints;
+
         if (aircraft.latitude! < this.minLatitude ||
             aircraft.latitude! > this.maxLatitude ||
             aircraft.longitude! < this.minLongitude ||
             aircraft.longitude! > this.maxLongitude)
             {
-                // remove marker from map and hashmap of aircraft we are monitoring
+                // remove marker, path and datapoints from map and hashmap of aircraft we are monitoring
                 // the aircraft has left the area we are monitoring, we are no longer interested in it
                 map.removeLayer(marker);
                 map.removeLayer(path);
-                for (let dp of datapoints) {
-                    map.removeLayer(dp);
-                }
-
+                map.removeLayer(datapoints);
                 this.monitoredAircraft.delete(aircraft.icao24);
             }
         else {
+            // i think this could be a cause of the jumping around
             marker.setLatLng([aircraft.latitude!, aircraft.longitude!]);
-            marker.bindPopup(getInfo(aircraft));
             path.addLatLng(L.latLng(aircraft.latitude!, aircraft.longitude!));
         }
     }
@@ -169,7 +166,7 @@ export class Area {
         if (!this.firstCallMade) {
             return;
         }
-        let data = await fetchData(this.payload);
+        let data = await fetchData(this.payload!);
         if (data) {
             if (data.states) {
                 for (let aircraft of data.states) {
@@ -179,10 +176,14 @@ export class Area {
                         }
                     } else {
                         // update this aircrafts info to the data we just retrieved
-                        let [marker, _, path, datapoints] = this.monitoredAircraft.get(aircraft.icao24)!;
-                        this.monitoredAircraft.set(aircraft.icao24, [marker, aircraft, path, datapoints]);
-                        datapoints.push(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1 }));
-                    }                
+                        let [_, aircraftUI] = this.monitoredAircraft.get(aircraft.icao24)!;
+                        let marker = aircraftUI.marker;
+                        let datapoints = aircraftUI.datapoints;
+
+                        this.monitoredAircraft.set(aircraft.icao24, [aircraft, aircraftUI]);
+                        marker.bindPopup(getInfo(aircraft));
+                        datapoints.addLayer(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1 }));
+                    }
                 }
             }
         }
@@ -219,9 +220,9 @@ function getInfo(aircraft: AircraftInfo): string {
     let callsign = aircraft.callsign ? aircraft.callsign : "N/A";
     let latitude = aircraft.latitude!.toFixed(5);
     let longitude = aircraft.longitude!.toFixed(5);
-    let mph = aircraft.velocity ? (aircraft.velocity * 2.237).toFixed(2).toString() + " mph" : "N/A";
+    let mph = aircraft.velocity ? (aircraft.velocity * 2.237).toFixed(0).toString() + " mph" : "N/A";
     let baro_altitude_ft = aircraft.baro_altitude ? (aircraft.baro_altitude * 3.281).toFixed(0).toString() + " ft" : "N/A";
-    let true_track = aircraft.true_track ? aircraft.true_track.toString() + " °" : "N/A";
+    let true_track = aircraft.true_track ? aircraft.true_track.toFixed(0).toString() + " °" : "N/A";
     return `\
         Callsign = ${callsign}
         Latitude = ${latitude}
@@ -269,5 +270,37 @@ function colorFromAltitude(altitude: number | null): string {
 issues at the moment are:
 aircraft can still jump around quite a bit when new data comes in which makes it seem like the interpreted position of the aircraft
 in the 5 seconds we don't have data isn't very accurate
+
+I noticed an issue where, if you are watching a plane, its path updates but the white markers wont appear until you click off and click back on
+
+these are timestamps representing the time this data applies to
+1788865762
+1788865771
+1788865775
+1788865785
+1788865789
+1788865799
+1788865804
+1788865810
+1788865820
+
+
+9
+4
+10
+4
+10
+5
+6
+10
+
+not constant time differences
+especially when planes are slowing down and making turns the path traced out can be wildly different and silly
+lots of spiky lines and the aircraft jumps backwards and fowards along the path
+I think a good approach might be to always be 1 step behind the data coming in, that way we know where the aircraft should be in x seconds
+and can guide it to that location
+
+when we initialize area we dont want to draw anything,
+only on the first time we receive data from the periodic updates do we draw to map
 */
 
