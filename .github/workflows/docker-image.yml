@@ -23,4 +23,4 @@ jobs:
       run: docker build -t rust_flight_tracker .
 
     - name: Push to Dockerhub
-      run: docker push JoelCrabbe/rust_flight_tracker:latest
+      run: docker push joelcrabbe/rust_flight_tracker:latest

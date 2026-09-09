@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::env;
 
 use crate::prelude::*;
-use crate::utils;
 
 const TOKEN_UPDATE_URL: &str =
     "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
