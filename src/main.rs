@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use anyhow::Result;
 use axum::{Router, routing::post};
-use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 
 use request_handlers::{coordinates_handler, test_handler};
 
@@ -17,13 +17,13 @@ mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let token_manager = match TokenManager::new() {
+    let token_manager = match TokenManager::new().await {
         Ok(token) => token,
         Err(e) => {
             eprintln!("{e}");
             std::process::exit(1); // not sure about this error handling
         }
-    };
+    };  
 
     let http_client = reqwest::Client::new();
 
@@ -32,10 +32,10 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/coordinates", post(coordinates_handler))
         .route("/test", post(test_handler))
-        .layer(CorsLayer::permissive())
+        .fallback_service(ServeDir::new("frontend/dist"))
         .with_state(osnc);
 
-    let listener = tokio::net::TcpListener::bind("localhost:3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .expect("problem binding the TcpListener to port 3000");
 
@@ -45,7 +45,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
-/*
-see what type of tests we can write for this application
-*/

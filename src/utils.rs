@@ -26,6 +26,7 @@ pub fn update_env_file(token_manager: &TokenManager) -> Result<()> {
     Ok(())
 }
 
+#[allow(unused)]
 pub fn save_data_to_file(data: &AircraftData, filename: &str) -> Result<()> {
     let json_string =
         to_string_pretty(data).context("problem serializing `AircraftData` struct")?;

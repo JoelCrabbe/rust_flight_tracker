@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::collections::HashMap;
+use std::env;
 
 use crate::prelude::*;
 use crate::utils;
@@ -21,23 +22,48 @@ struct TokenJSONResponse {
     access_token: String,
 }
 
-impl TokenManager {
-    pub fn new() -> Result<Self> {
-        dotenvy::dotenv_override().context("problem loading environment variables")?;
+pub async fn update_token(client_id: &str, client_secret: &str) -> Result<(String, f64)> {
+    let client = reqwest::Client::new();
 
-        let client_id = dotenvy::var("CLIENT_ID")
+    let data = HashMap::from([
+        ("grant_type", "client_credentials"),
+        ("client_id", client_id),
+        ("client_secret", client_secret),
+    ]);
+
+    let response = client
+        .post(TOKEN_UPDATE_URL)
+        .form(&data)
+        .send()
+        .await
+        .context("problem sending request to OpenSkyNetwork server for new token")?;
+
+    let json_data = response
+        .json::<TokenJSONResponse>()
+        .await
+        .context("problem deserializing the token response into json")?;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64();
+
+    Ok((json_data.access_token, now))
+}
+
+impl TokenManager {
+    pub async fn new() -> Result<Self> {
+        let client_id = env::var("CLIENT_ID")
             .context("problem reading `CLIENT_ID` environment variable")?;
 
-        let client_secret = dotenvy::var("CLIENT_SECRET")
+        let client_secret = env::var("CLIENT_SECRET")
             .context("problem reading `CLIENT_SECRET` environment variable")?;
 
-        let token =
-            dotenvy::var("TOKEN").context("problem reading `TOKEN` environment variable")?;
-
-        let time_token_was_made = dotenvy::var("TIME_TOKEN_WAS_MADE")
-            .context("problem reading `TIME_TOKEN_WAS_MADE` environment variable")?
-            .parse::<f64>()
-            .context("problem parsing `TIME_TOKEN_WAS_MADE` environment variable into `f64`")?;
+        // need to send request to get new token
+        let (token, time_token_was_made) = match update_token(&client_id, &client_secret).await {
+            Ok((tok, time)) => (tok, time),
+            Err(e) => panic!("{e}"),
+        };
 
         Ok(TokenManager {
             client_id,
@@ -56,56 +82,21 @@ impl TokenManager {
         // tokens expire 30 minutes after they are made
         // here if the token has less than 30 seconds remaining, it is updated
         if now >= self.time_token_was_made + 1770_f64 {
-            match self.update_token().await {
-                Ok(token) => token,
+            match update_token(&self.client_id, &self.client_secret).await {
+                Ok((token, time_token_was_made)) => {
+                    println!("Updated OpenSkyNetwork API TOKEN");
+                    self.token = token;
+                    self.time_token_was_made = time_token_was_made;
+                    self.token.clone()
+                },
                 Err(e) => {
                     eprintln!("{e}");
-                    // TODO: we are currently returning the old token, not sure if we should do this
-                    self.token.clone()
-                }
+                    self.token.clone() // return old token, this doesn't make sense but idk what else to do atm
+                },
             }
         } else {
-            self.token.clone()
+            self.token.clone() // return old token, this doesn't make sense but idk what else to do atm
         }
-    }
-
-    pub async fn update_token(&mut self) -> Result<String> {
-        let client = reqwest::Client::new();
-
-        let data = HashMap::from([
-            ("grant_type", "client_credentials"),
-            ("client_id", self.client_id.as_str()),
-            ("client_secret", self.client_secret.as_str()),
-        ]);
-
-        let response = client
-            .post(TOKEN_UPDATE_URL)
-            .form(&data)
-            .send()
-            .await
-            .context("problem sending request to OpenSkyNetwork server for new token")?;
-
-        let json_data = response
-            .json::<TokenJSONResponse>()
-            .await
-            .context("problem deserializing the token response into json")?;
-
-        // get the current time this token was made
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs_f64();
-
-        // update TokenManager struct fields with new data
-        self.token = json_data.access_token;
-        self.time_token_was_made = now;
-
-        // update .env file with new token value and time token was made
-        if let Err(e) = utils::update_env_file(self) {
-            eprintln!("{e}");
-        }
-
-        Ok(self.token.clone())
     }
 
     pub async fn header(&mut self) -> HeaderMap {
@@ -118,3 +109,14 @@ impl TokenManager {
         header
     }
 }
+
+/*
+in .env file i should keep tokens which do not change
+i.e. CLIENT_ID, CLIENT_SECRET
+and i should manage TOKEN and TIME_TOKEN_WAS_MADE in the file itself
+
+when the program is shutdown, we would lose info of the TOKEN and TIME_TOKEN_WAS_MADE
+and so would end up making a new one everytime the program is run
+which isn't too bad i guess
+
+*/

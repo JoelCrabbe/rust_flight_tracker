@@ -4,6 +4,10 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
 import { AircraftData, AircraftInfo, MinMaxLatLong, AircraftUI } from "./types";
 
 const earthRadius = 6_371_000;
@@ -12,12 +16,17 @@ export const timeBetweenApiCalls = 6_000;
 export let map: L.Map;
 let drawnItems: L.FeatureGroup;
 
+export async function setupMap() {
 
-export function setupMap() {
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: markerIcon2x,
+        iconUrl: markerIcon,
+        shadowUrl: markerShadow,
+    });
+
     map = L.map("map").setView([51.505, -0.09], 4);
 
-    // revealing an api key, must we do this? does it matter? can we hide it in an environment variable?
-    L.tileLayer("https://api.maptiler.com/maps/hybrid-v4/256/{z}/{x}/{y}.jpg?key=DoZE0UNdz0voU0cNhss2", {
+    L.tileLayer(`https://api.maptiler.com/maps/hybrid-v4/256/{z}/{x}/{y}.jpg?key=yGUhfA2ROFkOYiODh0wD`, {
         attribution: "&copy; OpenStreetMap contributors",
         }).addTo(map);
     
@@ -192,7 +201,7 @@ export class Area {
 
 async function fetchData(payload: MinMaxLatLong): Promise<AircraftData | null> {
         try {
-            const response = await fetch("http://localhost:3000/coordinates", {
+            const response = await fetch("/coordinates", {
                 method: "POST",
                 headers: { "Content-Type": "Application/json" },
                 body: JSON.stringify(payload),
