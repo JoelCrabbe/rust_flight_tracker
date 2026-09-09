@@ -20,7 +20,7 @@ jobs:
       run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       
     - name: Build the Docker image
-      run: docker build -t rust_flight_tracker .
+      run: docker build -t ${{secrets.DOCKER_USERNAME}}/rust_flight_tracker .
 
     - name: Push to Dockerhub
-      run: docker push joelcrabbe/rust_flight_tracker:latest
+      run: docker push ${{secrets.DOCKER_USERNAME}}/rust_flight_tracker:latest
