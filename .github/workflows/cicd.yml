@@ -33,7 +33,7 @@ jobs:
 
           chmod 400 ssh_private_key.pem
 
-          ssh -i ssh_private_key.pem $EC2_NAME << EOF
+          ssh -o StrictHostKeyChecking=no -i ssh_private_key.pem $EC2_NAME << EOF
 
           sudo docker pull $DOCKER_USERNAME/rust_flight_tracker:latest
 
