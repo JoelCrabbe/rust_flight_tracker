@@ -8,6 +8,10 @@
 Rust flight tracker is a rust / typescript project which uses the [opensky-network](https://opensky-network.org/) API to track  aircraft in realtime, in user defined areas of the world.
 Users have access to realtime data about aircraft such as latitude, longitude, velocity, altitude, callsign etc and receive frequent updates roughly every 5 seconds.
 
+## General Info
+The app makes requests to the opensky-network API every 5 seconds. This means in between api calls, aircraft's positions are being interpolated.
+I used the [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula) to work out how to update aircraft's positions in between real datapoints from the API. This works ok, however it assumes that aircraft are travelling at a constant speed which is not true in reality and when a new datapoint comes in, (symbolised by the white dot along the aircraft's path) aircraft can suddenly jump to a new position. This is something I would like to improve in the future.
+
 ## External Tools used in this project
 - [Leaflet JS](https://leafletjs.com/)
 
