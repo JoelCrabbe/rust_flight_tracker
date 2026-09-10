@@ -52,6 +52,7 @@ pub async fn update_token(client_id: &str, client_secret: &str) -> Result<(Strin
 
 impl TokenManager {
     pub async fn new() -> Result<Self> {
+        dotenvy::dotenv_override().unwrap();
         let client_id = env::var("CLIENT_ID")
             .context("problem reading `CLIENT_ID` environment variable")?;
 

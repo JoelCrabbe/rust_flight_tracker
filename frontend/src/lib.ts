@@ -105,8 +105,8 @@ export class Area {
 
     addAircraftToMap(aircraft: AircraftInfo) {
         let marker = L.marker([aircraft.latitude!, aircraft.longitude!]);
-        let info = getInfo(aircraft);
-        marker.bindPopup(info);
+        let popup = L.popup({ autoPan: false }).setContent(getInfo(aircraft));
+        marker.bindPopup(popup);
         marker.addTo(map);
 
         let path = L.polyline([L.latLng(aircraft.latitude!, aircraft.longitude!)], { color: colorFromAltitude(aircraft.baro_altitude)});
@@ -190,7 +190,8 @@ export class Area {
                         let datapoints = aircraftUI.datapoints;
 
                         this.monitoredAircraft.set(aircraft.icao24, [aircraft, aircraftUI]);
-                        marker.bindPopup(getInfo(aircraft));
+                        let popup = L.popup({ autoPan: false }).setContent(getInfo(aircraft));
+                        marker.bindPopup(popup);
                         datapoints.addLayer(L.circleMarker(L.latLng(aircraft.latitude!, aircraft.longitude!), { color: "white", radius: 1 }));
                     }
                 }

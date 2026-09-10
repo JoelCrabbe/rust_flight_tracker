@@ -11,8 +11,8 @@ jobs:
     env:
       DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
       DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-      EC2_NAME: ${{secrets.RUST_FLIGHT_TRACKER_EC2_NAME}}
-      SSH_PRIVATE_KEY: ${{secrets.RUST_FLIGHT_TRACKER_SSH_PRIVATE_KEY}}
+      RASPBERRY_PI_PASSWORD: ${{secrets.RASPBERRY_PI_PASSWORD}}
+      RASPBERRY_PI_IP: ${{secrets.RASPBERRY_PI_IP}}
 
 
     steps:
@@ -26,9 +26,17 @@ jobs:
       
       - name: Push to Dockerhub
         run: docker push $DOCKER_USERNAME/rust_flight_tracker:latest
-      
-      - name: Deploy to EC2
+
+      - name: Deploy to Raspberry PI 5
         run: |
+          sudo apt update
+
+          sudo apt install -y sshpass
+
+          sshpass -p "$RASPBERRY_PI_PASSWORD" \
+            ssh -o StrictHostKeyChecking=no \
+            joel@$RASPBERRY_PI_IP << EOF
+
           echo "$SSH_PRIVATE_KEY" > ssh_private_key.pem
 
           chmod 400 ssh_private_key.pem

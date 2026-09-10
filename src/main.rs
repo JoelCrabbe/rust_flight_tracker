@@ -4,6 +4,7 @@ use crate::prelude::*;
 use anyhow::Result;
 use axum::{Router, routing::post};
 use tower_http::services::ServeDir;
+use tower_http::cors::CorsLayer;
 
 use request_handlers::{coordinates_handler, test_handler};
 
@@ -33,6 +34,7 @@ async fn main() -> Result<()> {
         .route("/coordinates", post(coordinates_handler))
         .route("/test", post(test_handler))
         .fallback_service(ServeDir::new("frontend/dist"))
+        // .layer(CorsLayer::permissive()) // remove for hosting online
         .with_state(osnc);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
