@@ -1,8 +1,8 @@
 # Rust Flight Tracker
 
-## DEMO
+## Demo
 
-<iframe width="560" height="315" src="https://www.youtube.com/watch?v=NZEWJpPLk2s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![rust flight tracker demo](https://img.youtube.com/vi/NZEWJpPLk2s/maxresdefault.jpg)](https://www.youtube.com/watch?v=NZEWJpPLk2s)
 
 ## What is it?
 Rust flight tracker is a rust / typescript project which uses the [opensky-network](https://opensky-network.org/) API to track  aircraft in realtime, in user defined areas of the world.
