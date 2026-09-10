@@ -4,9 +4,9 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
+// import markerIcon from "leaflet/dist/images/marker-icon.png";
+// import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+// import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 import { AircraftData, AircraftInfo, MinMaxLatLong, AircraftUI } from "./types";
 
@@ -18,11 +18,11 @@ let drawnItems: L.FeatureGroup;
 
 export async function setupMap() {
 
-    L.Icon.Default.mergeOptions({
-        iconRetinaUrl: markerIcon2x,
-        iconUrl: markerIcon,
-        shadowUrl: markerShadow,
-    });
+    // L.Icon.Default.mergeOptions({
+    //     iconRetinaUrl: markerIcon2x,
+    //     iconUrl: markerIcon,
+    //     shadowUrl: markerShadow,
+    // });
 
     map = L.map("map").setView([51.505, -0.09], 4);
 
@@ -202,7 +202,7 @@ export class Area {
 
 async function fetchData(payload: MinMaxLatLong): Promise<AircraftData | null> {
         try {
-            const response = await fetch("/coordinates", {
+            const response = await fetch("http://localhost:3000/coordinates", {
                 method: "POST",
                 headers: { "Content-Type": "Application/json" },
                 body: JSON.stringify(payload),
