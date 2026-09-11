@@ -58,8 +58,6 @@ pub struct AircraftInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-// Wrapping the vec in an Option as it is possible the response returns null for states
-// this happens in the case no aircraft were found in a particular area
 pub struct AircraftData {
     pub states: Option<Vec<AircraftInfo>>,
     pub time: i64,

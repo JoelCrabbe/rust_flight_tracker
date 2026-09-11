@@ -21,7 +21,7 @@ pub async fn coordinates_handler(
     State(mut state): State<OpenSkyNetworkClient>,
     Json(payload): Json<MinMaxLatLong>,
 ) -> Json<AircraftData> {
-    println!("request for data come in");
+    println!("request for data from frontend sent");
     match state.find_aircraft(payload).await {
         Ok(data) => Json(data),
         Err(e) => {
@@ -29,11 +29,4 @@ pub async fn coordinates_handler(
             Json(AircraftData::default())
         }
     }
-}
-
-pub async fn test_handler() -> Json<AircraftData> {
-    println!("received request, sending example data");
-    let json_string = std::fs::read_to_string("response.json").unwrap();
-    let example_data = from_str::<AircraftData>(&json_string).unwrap();
-    Json(example_data)
 }

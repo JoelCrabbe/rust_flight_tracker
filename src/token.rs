@@ -7,7 +7,6 @@ use crate::prelude::*;
 const TOKEN_UPDATE_URL: &str =
     "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 
-// Tokens expire after 30 minutes. A 401 Unauthorized response means the token has expired - request a new one and retry.
 #[derive(Clone)]
 pub struct TokenManager {
     pub client_id: String,
@@ -53,8 +52,8 @@ pub async fn update_token(client_id: &str, client_secret: &str) -> Result<(Strin
 impl TokenManager {
     pub async fn new() -> Result<Self> {
         dotenvy::dotenv_override().unwrap();
-        let client_id = env::var("CLIENT_ID")
-            .context("problem reading `CLIENT_ID` environment variable")?;
+        let client_id =
+            env::var("CLIENT_ID").context("problem reading `CLIENT_ID` environment variable")?;
 
         let client_secret = env::var("CLIENT_SECRET")
             .context("problem reading `CLIENT_SECRET` environment variable")?;
@@ -88,11 +87,11 @@ impl TokenManager {
                     self.token = token;
                     self.time_token_was_made = time_token_was_made;
                     self.token.clone()
-                },
+                }
                 Err(e) => {
                     eprintln!("{e}");
                     self.token.clone() // return old token, this doesn't make sense but idk what else to do atm
-                },
+                }
             }
         } else {
             self.token.clone() // return old token, this doesn't make sense but idk what else to do atm
@@ -101,22 +100,9 @@ impl TokenManager {
 
     pub async fn header(&mut self) -> HeaderMap {
         let mut header = HeaderMap::new();
-        // I am using expect here as a better alternative to unwrap
-        // also I think this will always work so just handling the error for completeness
         let val = HeaderValue::from_str(&format!("Bearer {}", self.get_token().await))
             .expect("couldnt convert token value into a headervalue");
         header.insert("Authorization", val);
         header
     }
 }
-
-/*
-in .env file i should keep tokens which do not change
-i.e. CLIENT_ID, CLIENT_SECRET
-and i should manage TOKEN and TIME_TOKEN_WAS_MADE in the file itself
-
-when the program is shutdown, we would lose info of the TOKEN and TIME_TOKEN_WAS_MADE
-and so would end up making a new one everytime the program is run
-which isn't too bad i guess
-
-*/
